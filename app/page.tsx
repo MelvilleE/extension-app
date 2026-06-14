@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,23 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Download, Edit, Save } from "lucide-react";
 import { jsPDF } from "jspdf";
+// PdfPreview removed: preview UI disabled per request
 import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable
-} from "@dnd-kit/sortable";
+import {arrayMove, SortableContext, verticalListSortingStrategy, useSortable} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import { text } from "stream/consumers";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "@/components/ui/accordion";
-import { Form } from "radix-ui";
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
+// note: removed a stray Node-only import and an unused Radix import
 
 
 
@@ -34,12 +23,6 @@ import { Form } from "radix-ui";
 type UserRole = "user" | "admin";
 type ValueType = "unit" | "meter" | "meterage";
 
-type FormatType =
-  | "none"
-  | "qty"
-  | "length"
-  | "area"
-  | "name";
 
 interface Product {
   id: string;
@@ -51,7 +34,6 @@ interface Product {
   markupPercent: number;
   price: number;
   valueType: ValueType;
-  formatType?: FormatType;
   isCustomPricing?: boolean;
   customPrices?: { value: number; price: number }[];
 }
@@ -104,7 +86,6 @@ const initialProducts: Product[] = [
     markupPercent: 25,
     price: 250,
     valueType: "unit",
-    formatType: "name"
   },
   { 
     id: "w2", 
@@ -116,7 +97,6 @@ const initialProducts: Product[] = [
     markupPercent: 25, 
     price: 400,
     valueType: "unit",
-    formatType: "name"
   },
   { 
     id: "d1", 
@@ -128,7 +108,6 @@ const initialProducts: Product[] = [
     markupPercent: 25,
     price: 800,
     valueType: "unit",
-    formatType: "none"
   },
   { 
     id: "d2", 
@@ -140,7 +119,6 @@ const initialProducts: Product[] = [
     markupPercent: 25,
     price: 1200,
     valueType: "unit",
-    formatType: "none"
   },
   { 
     id: "s1", 
@@ -152,7 +130,6 @@ const initialProducts: Product[] = [
     markupPercent: 25, 
     price: 150,
     valueType: "meter",
-    formatType: "none"
   },
   { 
     id: "r1", 
@@ -164,7 +141,6 @@ const initialProducts: Product[] = [
     markupPercent: 0,
     price: 0,
     valueType: "meterage",
-    formatType: "area",
     isCustomPricing: true,
     customPrices: [
       { value: 10, price: 1700 },
@@ -188,13 +164,13 @@ const DEFAULT_EXTRA_COSTS = `
 Required
 Cost of building inspector - £985+vat
 Asbestos Survey - £300+vat
+
+Optional
 Move boiler – approx. £1500-£2,000+vat dependent on location and new boiler flue.
 Move manhole to new location - Full assessment needed, normally approx. £1500+vat per connection, £600+vat per further connection
 Drain survey - will be needed if uncertainty of sewer/drain location and how this will affect foundations of the new extension. £400 +vat for full camera survey and report. (1 hour survey)
 Drawings & application - process for drainage works £125+vat
 Thames water application fee - £299.00
-
-Optional
 Soakaway – Under building regulations section H, a soak away for surface water is now required budget £1350+vat
 Aco drain – if required £150 per metre.
 Seedun Roof – Dependent on spec & flat roof finish – budget £2-£4,000+vat
@@ -231,7 +207,7 @@ FOR CONSIDERATION
 
 In order that we extend the courtesy of choice wherever we can, we adopt an open approach in how your Extension is to be built, and, therefore, how it can look on completion.
 
-This is very much borne out of a ‘can do’ attitude we choose to have, resulting in many varied styles and finishes we achieve in the extensions we carry out. Our work, therefore, reflects a more considered approach, which may indeed stray from the plan. Our concern is not how quickly we can finish and move on to the next project without interruption, but to build with your involvement. This might take a little longer! As long as it is structurally viable, we are happy to talk through changes/ideas you may have and carry out the works accordingly.
+This is very much born out of a ‘can do’ attitude we choose to have, resulting in many varied styles and finishes we achieve in the extensions we carry out. Our work, therefore, reflects a more considered approach, which may indeed stray from the plan. Our concern is not how quickly we can finish and move on to the next project without interruption, but to build with your involvement. This might take a little longer! As long as it is structurally viable, we are happy to talk through changes/ideas you may have and carry out the works accordingly.
 `;
 
 const DEFAULT_BRIEF_TEXT = `Thank you again for the opportunity to quote for your build. This quotation is based on our recent discussions regarding the proposed extension to your home.
@@ -383,18 +359,21 @@ function SortableSection({ section, children }: any) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative">
-      
-      {/* Drag Handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute left-2 top-4 cursor-grab text-gray-400 hover:text-black"
-      >
-        <GripVertical size={20} />
+    <div className="relative" style={style}>
+      {/* Absolute-positioned handle sits left of the card so it doesn't affect alignment */}
+      <div className="absolute -left-6 top-2">
+        <div
+          ref={setNodeRef}
+          {...attributes}
+          {...listeners}
+          className="cursor-grab text-gray-400 hover:text-black p-1"
+          aria-label={`Drag ${section.name}`}
+        >
+          <GripVertical size={20} />
+        </div>
       </div>
 
-      <div className="pl-8">
+      <div className="pl-0">
         {children}
       </div>
 
@@ -405,6 +384,7 @@ function SortableSection({ section, children }: any) {
 
 export default function QuotationApp() {
   const [role, setRole] = useState<UserRole | null>(null);
+  // preview UI disabled
   const [filterFromDate, setFilterFromDate] = useState<string>("");
   const [filterToDate, setFilterToDate] = useState<string>("");
 
@@ -514,6 +494,12 @@ useEffect(() => {
     useSensor(KeyboardSensor)
   );
   const handleEditProduct = (product: Product) => {
+    // Ensure admin panels are visible and the target section is open
+    setSectionsExpanded(true);
+    setManageSectionsExpanded(true);
+    setProductFormExpanded(true);
+    setOpenSections(prev => prev.includes(product.section) ? prev : [...prev, product.section]);
+
     setEditingProduct(product);
     setNewProduct({
       name: product.name,
@@ -789,7 +775,45 @@ const saveQuote = () => {
     width: number,
     height: number
   }[]>([]);
+  const [logosLoading, setLogosLoading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Seed default logo from public/nllr_logo.png if none present
+  useEffect(() => {
+    let cancelled = false;
+    async function seedDefaultLogo() {
+      if (logos.length > 0) return; // don't overwrite existing uploads
+      setLogosLoading(true);
+      try {
+        const res = await fetch('/nllr_logo.png');
+        if (!res.ok) throw new Error('Failed to fetch default logo');
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (cancelled) return;
+          const dataUrl = reader.result as string;
+          const seeded = {
+            id: `logo-seed-1`,
+            name: 'nllr_logo.png',
+            src: dataUrl,
+            x: 15,
+            y: 15,
+            width: 60,
+            height: 30,
+          };
+          setLogos([seeded]);
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        // ignore fetch errors; leave logos empty
+        console.warn('Could not seed default logo:', err);
+      } finally {
+        if (!cancelled) setLogosLoading(false);
+      }
+    }
+    seedDefaultLogo();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -934,9 +958,76 @@ const saveQuote = () => {
     customPrices: [{ value: 0, price: 0 }]
   });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const productFormRef = useRef<HTMLDivElement | null>(null);
   const [newSectionName, setNewSectionName] = useState("");
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [sectionToEditName, setSectionToEditName] = useState("");
+  const editRowRef = useRef<HTMLDivElement | null>(null);
+  const sectionsCardRef = useRef<HTMLDivElement | null>(null);
+  // Collapse/expand parent for sections list in admin UI
+  const [sectionsExpanded, setSectionsExpanded] = useState<boolean>(false);
+  // Collapse/expand parent for the bottom text sections (brief, extra costs, pricing, terms)
+  const [textSectionsExpanded, setTextSectionsExpanded] = useState<boolean>(false);
+  // Additional collapsible admin panels
+  const [commissionExpanded, setCommissionExpanded] = useState<boolean>(false);
+  const [manageSectionsExpanded, setManageSectionsExpanded] = useState<boolean>(false);
+  const [productFormExpanded, setProductFormExpanded] = useState<boolean>(false);
+  const [dataMigrationExpanded, setDataMigrationExpanded] = useState<boolean>(false);
+  const [logosExpanded, setLogosExpanded] = useState<boolean>(false);
+  const [selectProductsExpanded, setSelectProductsExpanded] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (editingSection && sectionsCardRef.current) {
+      // Compute document position of the sections card and scroll so its top aligns to the viewport top
+      const rect = sectionsCardRef.current.getBoundingClientRect();
+      const docTop = window.pageYOffset || document.documentElement.scrollTop;
+      let target = rect.top + docTop;
+
+      // Try to account for a fixed header: look for common header selectors
+      const header = document.querySelector('header') || document.querySelector('[role="banner"]') || document.querySelector('.fixed');
+      const headerHeight = header ? (header as HTMLElement).getBoundingClientRect().height : 0;
+      if (headerHeight) target = Math.max(0, target - headerHeight - 8);
+
+      // initial scroll
+      window.scrollTo({ top: target, behavior: 'smooth' });
+
+      // second pass after layout settles (handles async DOM shifts)
+      setTimeout(() => {
+        if (sectionsCardRef.current) {
+          sectionsCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const input = document.querySelector('#sectionName') as HTMLInputElement | null;
+          if (input) input.focus();
+        }
+      }, 350);
+    }
+  }, [editingSection]);
+
+  // When editingProduct is set, scroll the Add New Product card into view and focus the product name input
+  useEffect(() => {
+    if (editingProduct && productFormRef.current) {
+      // Compute document position of the product card and scroll so its top aligns to viewport top
+      const rect = productFormRef.current.getBoundingClientRect();
+      const docTop = window.pageYOffset || document.documentElement.scrollTop;
+      let target = rect.top + docTop;
+
+      // Try to account for a fixed header: look for common header selectors
+      const header = document.querySelector('header') || document.querySelector('[role="banner"]') || document.querySelector('.fixed');
+      const headerHeight = header ? (header as HTMLElement).getBoundingClientRect().height : 0;
+      if (headerHeight) target = Math.max(0, target - headerHeight - 8); // small gap
+
+      // initial scroll
+      window.scrollTo({ top: target, behavior: 'smooth' });
+
+      // second pass after layout settles (handles async accordion/DOM shifts)
+      setTimeout(() => {
+        if (productFormRef.current) {
+          productFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const input = productFormRef.current.querySelector('#productName') as HTMLInputElement | null;
+          if (input) input.focus();
+        }
+      }, 350);
+    }
+  }, [editingProduct]);
 
   //---------------------------------
   //---------------------------------
@@ -958,6 +1049,47 @@ const saveQuote = () => {
   const [pricingText, setPricingText] = useState<string>(DEFAULT_PRICING_TEXT.trim()); // Pricing text for PDF
   const [termsAndConditions, setTermsAndConditions] = useState<string>(DEFAULT_TERMS_AND_CONDITIONS.trim()); // Terms and conditions text for PDF
   const VAT_RATE = vatRate;
+
+  // data handling UI state
+  const [dataUser] = useState('admin');
+  const [dataPass, setDataPass] = useState('');
+
+  // --- LocalStorage export/import helpers (admin-only) ---
+  const exportLocalStorage = () => {
+    const obj: Record<string, any> = {};
+    for (const k of Object.keys(localStorage)) {
+      try { obj[k] = JSON.parse(localStorage.getItem(k) ?? 'null'); }
+      catch { obj[k] = localStorage.getItem(k); }
+    }
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'quotation-localStorage.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const importLocalStorageFile = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      Object.entries(parsed).forEach(([k, v]) => {
+        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+      });
+      // Refresh to pick up new state
+      window.location.reload();
+    } catch (err) {
+      // simple user feedback
+      // eslint-disable-next-line no-console
+      console.error('Failed to import localStorage file', err);
+      alert('Import failed: invalid file');
+    }
+  };
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
 
 
@@ -1016,6 +1148,29 @@ const saveQuote = () => {
     doc.setLineWidth(0.5);
     doc.line(45, 76, 45 + sectionTitleWidth, 76);
 
+    // Helper: consistent line height and safe multi-line placement
+    function getLineHeight(documentInstance: any, multiplier = 1.15) {
+      const fontSize = typeof documentInstance.getFontSize === 'function' ? documentInstance.getFontSize() : 11;
+      // jsPDF fontSize is in points; convert to mm (1pt = 0.352777778 mm)
+      return fontSize * 0.352777778 * multiplier;
+    }
+
+    function placeTextLines(documentInstance: any, lines: string[] | string, x: number, yStart: number, marginBottom = 20) {
+      const pageHeight = documentInstance.internal.pageSize.getHeight();
+      let y = yStart;
+      const effectiveLines = Array.isArray(lines) ? lines : [lines];
+      const lh = getLineHeight(documentInstance);
+      for (const line of effectiveLines) {
+        if (y + lh > pageHeight - marginBottom) {
+          documentInstance.addPage();
+          y = 20; // top margin
+        }
+        documentInstance.text(String(line), x, y);
+        y += lh;
+      }
+      return y;
+    }
+
 
 
     doc.setTextColor(0, 0, 0);
@@ -1056,25 +1211,31 @@ const saveQuote = () => {
       const baseCostText = product.baseCost > 0 ? ` (Base Cost: £${product.baseCost.toFixed(2)})` : " (Base Cost: NA)";
       const supplierText = product.supplier ? ` (Supplier: ${product.supplier})` : "(Supplier: NA)";
       const markupText = product.baseCost > 0 ? ` (Markup: ${product.markupPercent.toFixed(2)}%)` : " (Markup: NA)";
-      if (yPos > 270) {
+
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const bottomMargin = 20;
+      const lh = getLineHeight(doc);
+      if (yPos + lh > pageHeight - bottomMargin) {
         doc.addPage();
         yPos = 20;
       }
+
       doc.text(itemDesc, 20, yPos);
       doc.text(`£${itemTotal.toFixed(2)}`, 180, yPos, { align: 'right' });
-      yPos += 8;
-      const descriptionLines = doc.splitTextToSize(product.description, 100);
+      yPos += lh;
 
-      doc.text(descriptionLines, 25, yPos);
-      yPos += descriptionLines.length / 2 * 8 + 10;
+      const descriptionLines = doc.splitTextToSize(product.description, 100);
+      yPos = placeTextLines(doc, descriptionLines, 25, yPos, bottomMargin);
+
+      // small gap after description
+      yPos += lh * 0.4;
+
       doc.text(baseCostText, 25, yPos);
       doc.text(markupText, 100, yPos);
-      yPos += 8;
+      yPos += lh;
       doc.text(supplierText, 25, yPos);
-      yPos += 15;
-
-    }
-  );
+      yPos += lh * 1.2;
+    });
 
     doc.addPage();
     doc.setFont("helvetica", 'normal');
@@ -1131,6 +1292,8 @@ const saveQuote = () => {
     // Save the PDF
     doc.save(`WD-quotation-${formData.name.replace(/\s+/g, "-")}.pdf`);
     
+    
+    return doc;
 
   };
   //pdf generation function
@@ -1215,6 +1378,28 @@ const saveQuote = () => {
     doc.setLineWidth(0.5);
     doc.line(43, 68, 43 + sectionTitleWidth, 68);
 
+    // Helper: consistent line height and safe multi-line placement
+    function getLineHeight(documentInstance: any, multiplier = 1.15) {
+      const fontSize = typeof documentInstance.getFontSize === 'function' ? documentInstance.getFontSize() : 11;
+      return fontSize * 0.352777778 * multiplier; // pt->mm conversion * multiplier
+    }
+
+    function placeTextLines(documentInstance: any, lines: string[] | string, x: number, yStart: number, marginBottom = 20) {
+      const pageHeight = documentInstance.internal.pageSize.getHeight();
+      let y = yStart;
+      const effectiveLines = Array.isArray(lines) ? lines : [lines];
+      const lh = getLineHeight(documentInstance);
+      for (const line of effectiveLines) {
+        if (y + lh > pageHeight - marginBottom) {
+          documentInstance.addPage();
+          y = 20;
+        }
+        documentInstance.text(String(line), x, y);
+        y += lh;
+      }
+      return y;
+    }
+
 
 
     doc.setTextColor(0, 0, 0);
@@ -1271,7 +1456,7 @@ const saveQuote = () => {
 
 
 
-
+        const SquareMeterage: string[] =[];
         const SSColumns: string[] = [];
         const steelBeams: string[] = [];
         const RHSsteel: string[] = [];
@@ -1282,7 +1467,9 @@ const saveQuote = () => {
         const greyAluminium: string[] = [];
         const glazingVision: string[] = [];
         const otherItems: string[] = [];
+        const Descriptions: string[] = [];
 
+        let SquareMeterageDesc = "";
         let SSColumnsDesc = "";
         let steelBeamsDesc = "";
         let RHSsteelDesc = "";
@@ -1292,6 +1479,7 @@ const saveQuote = () => {
         let whiteUPVCDesc = "";
         let greyAluminiumDesc = "";
         let glazingVisionDesc = "";
+        let DescriptionsDesc = "";
 
         sectionItems.forEach(({ product, item }) => {
           const valueUnit = product.valueType === "unit" ? "" : product.valueType === "meter" ? "m" : "m²";
@@ -1323,7 +1511,14 @@ const saveQuote = () => {
           } else if (product.description.toLowerCase().includes("glazing vision")) {
             glazingVision.push(`${item.value}x ${product.name}`);
             if (!glazingVisionDesc) glazingVisionDesc = product.description;
-          } else {
+          } else if (section.name.toLowerCase().includes("description")) {
+            Descriptions.push("");
+            if (!DescriptionsDesc) DescriptionsDesc = product.description;
+          } else if (valueUnit === "m²") {
+            SquareMeterage.push(`(${item.value}m²)`);
+            if (!SquareMeterageDesc) SquareMeterageDesc = product.description;
+          }
+          else {
             if (item.value === 1) {
             otherItems.push(`${product.description}`);
             }
@@ -1354,47 +1549,81 @@ const saveQuote = () => {
           return `${rest.join(", ")} and ${last} ${description}`;
         }
 
+        function formatDescArray(arr: string[], description: string) {
+          if (!arr.length) return null;
+          if (arr.length === 1) return `${arr[0]} ${description}`;
+
+          const last = arr[arr.length - 1];
+          const rest = arr.slice(0, -1);
+
+          return `${rest.join(", ")} and ${last} ${description}`;
+
+        }
+
         const descriptions = [
+          formatValueArray(SquareMeterage, SquareMeterageDesc || ""),
           formatValueArray(SSColumns, SSColumnsDesc || "Structural Support Columns"),
           formatValueArray(steelBeams, steelBeamsDesc || "Steel Beams"),
           formatValueArray(RHSsteel, RHSsteelDesc || "RHS Steel"),
-
           formatNameArray(VeluxRL, VeluxDesc || "Velux Rooflight"),
           formatNameArray(RoofLantern, RoofLanternDesc || "Roof Lantern"),
           formatNameArray(Slimglaze, SlimglazeDesc || "Slimglaze SG2Double"),
           formatNameArray(whiteUPVC, whiteUPVCDesc || "White UPVC Window"),
           formatNameArray(greyAluminium, greyAluminiumDesc || "Grey Aluminium Window"),
           formatNameArray(glazingVision, glazingVisionDesc || "Glazing Vision Window"),
+          formatDescArray(Descriptions, DescriptionsDesc || ""),
           ...otherItems
         ].filter(Boolean);
 
         const paragraph = descriptions.join(", ") + ".";
-
         const splitText = doc.splitTextToSize(paragraph, 170);
-
-        const textHeight = splitText.length * 7;
-        const titleHeight = 20;
-        if (yPos + textHeight + titleHeight > 270) {
+        const lh = getLineHeight(doc);
+        // ensure there's enough space for title + paragraph, otherwise new page
+        if (yPos + (splitText.length + 1) * lh > doc.internal.pageSize.getHeight() - 20) {
           doc.addPage();
           yPos = 20;
         }
-        doc.setFontSize(12);
-        doc.setFont("helvetica", 'bold');
-        doc.text(section.name, 20, yPos);
-        yPos += 7;
         
-        doc.setFont("helvetica", 'normal');
-        doc.setFontSize(11);
-
-        doc.text(splitText, 20, yPos);
-        yPos += splitText.length / 2 * 8 + 7;
+        if (section.name.toLowerCase().includes("description") === false) {
+          doc.setFontSize(12);
+          doc.setFont("helvetica", 'bold');
+          doc.text(section.name, 20, yPos);
+          yPos += lh;
+          doc.setFont("helvetica", 'normal');
+          doc.setFontSize(11);
+          yPos = placeTextLines(doc, splitText, 20, yPos);
+          yPos += lh * 0.8;
+        } 
+        // DESCRIPTION SECTION PRESENT
+        else if (section.name.toLowerCase().includes("description")) {
+          doc.setFont("helvetica", 'normal');
+          doc.setFontSize(11);
+          yPos = placeTextLines(doc, splitText, 20, yPos);
+          yPos += lh * 0.8;
+        }
       }
     });
+
+
+    const pageHeight1 = doc.internal.pageSize.getHeight();
+    const pageWidth1 = doc.internal.pageSize.getWidth();
+    const marginLeft1 = 20;
+    const marginRight1 = 20;
+    const maxWidth1 = pageWidth1 - marginLeft1 - marginRight1;
+    const lineHeight1 = 5;
     // Add financial summary;
     doc.setFontSize(14);
+    yPos += 8;
+
+    if (yPos + 40 > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+
     doc.text('PRICING SUMMARY', 20, yPos);
     yPos += 10;
-    
+
     doc.setFontSize(12);
     doc.text(`Subtotal: ${gbpFormatter.format(subtotal)}`, 20, yPos);
     yPos += 7;
@@ -1404,50 +1633,42 @@ const saveQuote = () => {
     doc.text(`Total: ${gbpFormatter.format(grandTotal)}`, 20, yPos);
     yPos += 15;
 
-doc.setFont("helvetica", "bold");
-doc.setFontSize(12);
-if (yPos + 20 > doc.internal.pageSize.getHeight() - 20) {
-  doc.addPage();
-  yPos = 20;
-}
-doc.text("Extra Costs:", 20, yPos);
-yPos += 8;
-
-doc.setFont("helvetica", "normal");
-doc.setFontSize(11);
-
-const pageHeight1 = doc.internal.pageSize.getHeight();
-const pageWidth1 = doc.internal.pageSize.getWidth();
-const marginLeft1 = 20;
-const marginRight1 = 20;
-const maxWidth1 = pageWidth1 - marginLeft1 - marginRight1;
-const lineHeight1 = 5;
-
-// Wrap text
-const extraCostsLines = doc.splitTextToSize(
-  extraCostsText ?? "No additional costs specified.",
-  maxWidth1
-);
-
-// Paginate ONLY this section
-extraCostsLines.forEach((line: string) => {
-  if (yPos + lineHeight1 > pageHeight1 - 20) {
-    doc.addPage();
-    yPos = 20;
-
-    // Optional: repeat section title on new page
     doc.setFont("helvetica", "bold");
-    doc.text("Extra Costs (cont.):", marginLeft1, yPos);
+    doc.setFontSize(12);
+
+    doc.text("Extra Costs:", 20, yPos);
     yPos += 8;
 
     doc.setFont("helvetica", "normal");
-  }
+    doc.setFontSize(11);
 
-  doc.text(line, marginLeft1, yPos);
-  yPos += lineHeight1;
-});
 
-yPos += 5;
+
+    // Wrap text
+    const extraCostsLines = doc.splitTextToSize(
+      extraCostsText ?? "No additional costs specified.",
+      maxWidth1
+    );
+
+    // Paginate ONLY this section
+    extraCostsLines.forEach((line: string) => {
+      if (yPos + lineHeight1 > pageHeight1 - 20) {
+        doc.addPage();
+        yPos = 20;
+
+        // Optional: repeat section title on new page
+        doc.setFont("helvetica", "bold");
+        doc.text("Extra Costs (cont.):", marginLeft1, yPos);
+        yPos += 8;
+
+        doc.setFont("helvetica", "normal");
+      }
+
+      doc.text(line, marginLeft1, yPos);
+      yPos += lineHeight1;
+    });
+
+    yPos += 5;
 
 // ----- Pricing Text -----
 
@@ -1570,6 +1791,7 @@ yPos += 5;
     // Save the PDF
 
     doc.save(`quotation-${formData.name.replace(/\s+/g, "-")}.pdf`);
+    return doc;
   };
 
 
@@ -1579,11 +1801,11 @@ yPos += 5;
   useEffect(() => {
     localStorage.setItem("quotationSections", JSON.stringify(sections));
     localStorage.setItem("quotationProducts", JSON.stringify(products));
-    localStorage.setItem("CommissionA", JSON.stringify(formData));
-    localStorage.setItem("CommissionB", JSON.stringify(formData));
-    localStorage.setItem("CommissionC", JSON.stringify(formData));
+    localStorage.setItem("CommissionA", CommissionA.toString());
+    localStorage.setItem("CommissionB", CommissionB.toString());
+    localStorage.setItem("CommissionC", CommissionC.toString());
     localStorage.setItem("vatRate", vatRate.toString());
-  }, [sections, products, vatRate]);
+  }, [sections, products, vatRate, CommissionA, CommissionB, CommissionC]);
 
 
 
@@ -1634,13 +1856,17 @@ yPos += 5;
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-primary">Extension Quote Generator</h1>
+            <h1 className="text-3xl font-bold text-primary">Extension Quotations - Client Side</h1>
             <Button 
               variant="outline" 
               onClick={() => setRole(null)}
             >
               Change Role
             </Button>
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            {/* Top download button removed; kept at bottom of page */}
           </div>
 
           <Card className="mb-8">
@@ -1671,111 +1897,10 @@ yPos += 5;
             </CardContent>
           </Card>
 
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Logo Management</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                {logos.map(logo => (
-                  <div key={logo.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                    <img 
-                      src={logo.src} 
-                      alt={logo.name} 
-                      className="w-12 h-12 object-contain"
-                    />
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <div>
-                        <Label htmlFor={`x-${logo.id}`}>X Position</Label>
-                        <Input
-                          id={`x-${logo.id}`}
-                          type="number"
-                          value={logo.x}
-                          onChange={(e) => updateLogoPosition(logo.id, Number(e.target.value), logo.y)}
-                          min="0"
-                          max="210"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`y-${logo.id}`}>Y Position</Label>
-                        <Input
-                          id={`y-${logo.id}`}
-                          type="number"
-                          value={logo.y}
-                          onChange={(e) => updateLogoPosition(logo.id, logo.x, Number(e.target.value))}
-                          min="0"
-                          max="297"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`w-${logo.id}`}>Width</Label>
-                        <Input
-                          id={`w-${logo.id}`}
-                          type="number"
-                          value={logo.width}
-                          onChange={(e) => updateLogoSize(logo.id, Number(e.target.value), logo.height)}
-                          min="5"
-                          max="100"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`h-${logo.id}`}>Height</Label>
-                        <Input
-                          id={`h-${logo.id}`}
-                          type="number"
-                          value={logo.height}
-                          onChange={(e) => updateLogoSize(logo.id, logo.width, Number(e.target.value))}
-                          min="5"
-                          max="100"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeLogo(logo.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                
-                <Button
-                  variant="outline"
-                  className="w-full border-2 border-dashed"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Upload Logos
-                </Button>
-              </div>
-              
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                multiple
-                onChange={handleLogoUpload}
-              />
-              
-              {logos.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  NLLR Logo: xPos = 15, yPos = 15, Width = 60, Height = 30.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-
-
-
-
-
 
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>Image Management</CardTitle>
+              <CardTitle>Bespoke Image Management</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
@@ -1870,135 +1995,93 @@ yPos += 5;
           </Card>
 
           <div className="space-y-6">
-          <Accordion type="multiple" className="space-y-4">
-              {sections.map(section => {
-                const sectionProducts = products.filter(p => p.section === section.id);
-                if (sectionProducts.length === 0) return null;
-                
-                return (
-                  <AccordionItem value={section.id} key={section.id}>
-                    <Card className="mb-2">
-                      <CardHeader>
-                        <AccordionTrigger>
-                          <CardTitle>{section.name}</CardTitle>
-                        </AccordionTrigger>
-                      </CardHeader>
-                      <AccordionContent>
-                        <CardContent className="space-y-4">
-                          {sectionProducts.map(product => {
-                            // Find all items for this product
-                            const productItems = formData.items.filter(item => item.productId === product.id);
-                            
-                            return (
-                              <div key={product.id} className="border rounded-lg p-4">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div>
-                                    <h3 className="font-medium">{product.name}</h3>
-                                    <p className="text-sm text-muted-foreground">{product.description}</p>
-                                    {product.isCustomPricing ? (
-                                      <div className="text-sm text-muted-foreground mt-1">
-                                        Custom pricing - see details
+            <Card className="mb-4">
+              <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setSelectProductsExpanded(prev => !prev)}>
+                <CardTitle>Select Products</CardTitle>
+                <span className="text-sm text-gray-500">{selectProductsExpanded ? '▲' : '▼'}</span>
+              </CardHeader>
+              {selectProductsExpanded && (
+                <CardContent className="p-4">
+                  <Accordion type="multiple" className="space-y-4">
+                  {sections.map(section => {
+                    const sectionProducts = products.filter(p => p.section === section.id);
+                    if (sectionProducts.length === 0) return null;
+                    
+                    return (
+                      <AccordionItem value={section.id} key={section.id}>
+                        <Card className="mb-2">
+                          <CardHeader>
+                            <AccordionTrigger>
+                              <CardTitle>{section.name}</CardTitle>
+                            </AccordionTrigger>
+                          </CardHeader>
+                          <AccordionContent>
+                            <CardContent className="space-y-4">
+                              {sectionProducts.map(product => {
+                                const productItems = formData.items.filter(item => item.productId === product.id);
+                                return (
+                                  <div key={product.id} className="border rounded-lg p-4">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div>
+                                        <h3 className="font-medium">{product.name}</h3>
+                                        <p className="text-sm text-muted-foreground">{product.description}</p>
+                                        {product.isCustomPricing ? (
+                                          <div className="text-sm text-muted-foreground mt-1">Custom pricing - see details</div>
+                                        ) : (
+                                          <p className="text-sm text-muted-foreground">£{product.price.toFixed(2)} per {product.valueType === "unit" ? "unit" : product.valueType === "meter" ? "meter" : "m²"}</p>
+                                        )}
                                       </div>
-                                    ) : (
-                                      <p className="text-sm text-muted-foreground">
-                                        £{product.price.toFixed(2)} per {product.valueType === "unit" 
-                                          ? "unit" 
-                                          : product.valueType === "meter" 
-                                            ? "meter" 
-                                            : "m²"}
-                                      </p>
+                                      <Button onClick={() => handleAddItem(product.id)} size="sm">
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        Add
+                                      </Button>
+                                    </div>
+
+                                    {productItems.length > 0 && (
+                                      <div className="space-y-3 mt-3">
+                                        {productItems.map(item => (
+                                          <div key={item.id} className="flex flex-wrap items-center gap-2 p-2 border rounded">
+                                            <div className="flex items-center gap-2">
+                                              <Label htmlFor={`value-${item.id}`} className="text-sm">
+                                                {product.valueType === "unit" ? "Quantity" : product.valueType === "meter" ? "Length (m)" : "Area (m²)"}
+                                              </Label>
+                                              <Input id={`value-${item.id}`} type="number" min="0" step={product.valueType === "unit" ? "0" : "0.01"} value={item.value} onChange={(e) => handleItemValueChange(item.id, parseFloat(e.target.value) || 0)} className="w-20" placeholder={product.valueType === "unit" ? "Qty" : product.valueType === "meter" ? "m" : "m²"} />
+                                              <span className="text-sm text-muted-foreground">{product.valueType === "unit" ? "units" : product.valueType === "meter" ? "m" : "m²"}</span>
+                                            </div>
+
+                                            {product.valueType !== "unit" && (
+                                              <div className="flex items-center gap-2">
+                                                <Label htmlFor={`quantity-${item.id}`} className="text-sm">Quantity</Label>
+                                                <Input id={`quantity-${item.id}`} type="number" min="1" step="1" value={item.quantity} onChange={(e) => handleItemQuantityChange(item.id, parseInt(e.target.value) || 1)} className="w-20" placeholder="Qty" />
+                                                <span className="text-sm text-muted-foreground">units</span>
+                                              </div>
+                                            )}
+
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm font-medium">£{calculateItemTotal(item).toFixed(2)}</span>
+                                              <Button variant="outline" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
                                     )}
                                   </div>
-                                  <Button 
-                                    onClick={() => handleAddItem(product.id)}
-                                    size="sm"
-                                  >
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Add
-                                  </Button>
-                                </div>
-                                
-                                {productItems.length > 0 && (
-                                  <div className="space-y-3 mt-3">
-                                    {productItems.map(item => (
-                                      <div key={item.id} className="flex flex-wrap items-center gap-2 p-2 border rounded">
-                                        <div className="flex items-center gap-2">
-                                          <Label htmlFor={`value-${item.id}`} className="text-sm">
-                                            {product.valueType === "unit" 
-                                              ? "Quantity" 
-                                              : product.valueType === "meter" 
-                                                ? "Length (m)" 
-                                                : "Area (m²)"}
-                                          </Label>
-                                          <Input
-                                            id={`value-${item.id}`}
-                                            type="number"
-                                            min="0"
-                                            step={product.valueType === "unit" ? "0" : "0.01"}
-                                            value={item.value}
-                                            onChange={(e) => handleItemValueChange(item.id, parseFloat(e.target.value) || 0)}
-                                            className="w-20"
-                                            placeholder={product.valueType === "unit" 
-                                              ? "Qty" 
-                                              : product.valueType === "meter" 
-                                                ? "m" 
-                                                : "m²"}
-                                          />
-                                          <span className="text-sm text-muted-foreground">
-                                            {product.valueType === "unit" 
-                                              ? "units" 
-                                              : product.valueType === "meter" 
-                                                ? "m" 
-                                                : "m²"}
-                                          </span>
-                                        </div>
-                                        
-                                        {product.valueType !== "unit" && (
-                                          <div className="flex items-center gap-2">
-                                            <Label htmlFor={`quantity-${item.id}`} className="text-sm">
-                                              Quantity
-                                            </Label>
-                                            <Input
-                                              id={`quantity-${item.id}`}
-                                              type="number"
-                                              min="1"
-                                              step="1"
-                                              value={item.quantity}
-                                              onChange={(e) => handleItemQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                                              className="w-20"
-                                              placeholder="Qty"
-                                            />
-                                            <span className="text-sm text-muted-foreground">units</span>
-                                          </div>
-                                        )}
-                                        
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-medium">
-                                            £{calculateItemTotal(item).toFixed(2)}
-                                          </span>
-                                          <Button 
-                                            variant="outline" 
-                                            size="icon"
-                                            onClick={() => handleRemoveItem(item.id)}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </CardContent>
-                      </AccordionContent>
-                    </Card>
-                  </AccordionItem>
-                );
-              })}
-            </Accordion>
+                                );
+                              })}
+                            </CardContent>
+                          </AccordionContent>
+                        </Card>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+                </CardContent>
+              )}
+            </Card>
           </div>
+          {/* PdfPreview removed */}
 
           <Card className="mt-8">
             <CardContent className="pt-6">
@@ -2192,7 +2275,7 @@ yPos += 5;
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">Extension Product Management</h1>
+          <h1 className="text-3xl font-bold text-primary">Extension Quotations - Admin Management</h1>
           <Button 
             variant="outline" 
             onClick={() => setRole(null)}
@@ -2200,14 +2283,115 @@ yPos += 5;
             Change Role
           </Button>
           </div>
-          
+        
+
+        <Card className="mb-8">
+          <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setLogosExpanded(prev => !prev)}>
+            <CardTitle>Logo Management</CardTitle>
+            <span className="text-sm text-gray-500">{logosExpanded ? '▲' : '▼'}</span>
+          </CardHeader>
+          {logosExpanded && (
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+              {logos.map(logo => (
+                <div key={logo.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                  <img 
+                    src={logo.src} 
+                    alt={logo.name} 
+                    className="w-12 h-12 object-contain"
+                  />
+                  <div className="flex-1 grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor={`x-${logo.id}`}>X Position</Label>
+                      <Input
+                        id={`x-${logo.id}`}
+                        type="number"
+                        value={logo.x}
+                        onChange={(e) => updateLogoPosition(logo.id, Number(e.target.value), logo.y)}
+                        min="0"
+                        max="210"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`y-${logo.id}`}>Y Position</Label>
+                      <Input
+                        id={`y-${logo.id}`}
+                        type="number"
+                        value={logo.y}
+                        onChange={(e) => updateLogoPosition(logo.id, logo.x, Number(e.target.value))}
+                        min="0"
+                        max="297"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`w-${logo.id}`}>Width</Label>
+                      <Input
+                        id={`w-${logo.id}`}
+                        type="number"
+                        value={logo.width}
+                        onChange={(e) => updateLogoSize(logo.id, Number(e.target.value), logo.height)}
+                        min="5"
+                        max="100"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`h-${logo.id}`}>Height</Label>
+                      <Input
+                        id={`h-${logo.id}`}
+                        type="number"
+                        value={logo.height}
+                        onChange={(e) => updateLogoSize(logo.id, logo.width, Number(e.target.value))}
+                        min="5"
+                        max="100"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeLogo(logo.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+                
+              <Button
+                variant="outline"
+                className="w-full border-2 border-dashed"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Upload Logos
+              </Button>
+            </div>
+              
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              multiple
+              onChange={handleLogoUpload}
+            />
+              
+                {logos.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    NLLR Logo: xPos = 15, yPos = 15, Width = 60, Height = 30.
+                  </p>
+                )}
+              </CardContent>
+            )}
+        </Card>
 
         {/* Commission and VAT Settings */}
         <Card className="mb-8">
-          <CardHeader>
+          <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setCommissionExpanded(prev => !prev)}>
             <CardTitle>Commission & VAT Settings</CardTitle>
+            <span className="text-sm text-gray-500">{commissionExpanded ? '▲' : '▼'}</span>
           </CardHeader>
-          <CardContent className="space-y-4">
+          {commissionExpanded && (
+            <CardContent className="space-y-4">
 
             <div className="pt-4 border-t">
               <Label htmlFor="CommisionA">Admin (%)</Label>
@@ -2221,7 +2405,9 @@ yPos += 5;
                 onChange={(e) => setCommissionA(parseFloat(e.target.value) || 0)}
               />
             </div>
-                        <div className="pt-4 border-t">
+
+            {/* LocalStorage export/import moved to Data Handling section */}
+            <div className="pt-4 border-t">
               <Label htmlFor="CommissionB">Marketing (%)</Label>
               <Input
                 id="CommissionB"
@@ -2247,7 +2433,7 @@ yPos += 5;
             </div>
 
 
-                        <div className="pt-4 border-t">
+            <div className="pt-4 border-t">
               <Label htmlFor="vatRate">VAT Rate (%)</Label>
               <Input
                 id="vatRate"
@@ -2260,15 +2446,18 @@ yPos += 5;
               />
             </div>
           </CardContent>
+          )}
         </Card>
 
 
-        {/* Section Management */}
-        <Card className="mb-8">
-          <CardHeader>
+  {/* Section Management */}
+  <Card ref={sectionsCardRef} className="mb-8">
+          <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setManageSectionsExpanded(prev => !prev)}>
             <CardTitle>Manage Sections</CardTitle>
+            <span className="text-sm text-gray-500">{manageSectionsExpanded ? '▲' : '▼'}</span>
           </CardHeader>
-          <CardContent className="space-y-4">
+          {manageSectionsExpanded && (
+            <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
                 value={newSectionName}
@@ -2285,8 +2474,9 @@ yPos += 5;
               {sections.map(section => (
                 <div key={section.id} className="flex items-center justify-between p-3 border rounded-lg">
                   {editingSection?.id === section.id ? (
-                    <div className="flex gap-2 flex-1">
+                    <div ref={editRowRef} className="flex gap-2 flex-1">
                       <Input
+                        id="sectionName"
                         value={sectionToEditName}
                         onChange={(e) => setSectionToEditName(e.target.value)}
                         placeholder="Section name"
@@ -2305,7 +2495,6 @@ yPos += 5;
                   ) : (
                     <>
                       <span className="flex items-center">
-                        <GripVertical className="mr-2 h-4 w-4 text-gray-500" />
                         {section.name}
                       </span>
                       <div className="flex gap-2">
@@ -2330,14 +2519,17 @@ yPos += 5;
               ))}
             </div>
           </CardContent>
+          )}
         </Card>
 
         {/* Product Management */}
-        <Card className="mb-8">
-          <CardHeader>
+        <Card ref={productFormRef} className="mb-8">
+          <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setProductFormExpanded(prev => !prev)}>
             <CardTitle>Add New Product</CardTitle>
+            <span className="text-sm text-gray-500">{productFormExpanded ? '▲' : '▼'}</span>
           </CardHeader>
-          <CardContent className="space-y-4">
+          {productFormExpanded && (
+            <CardContent className="space-y-4">
             <div>
               <Label htmlFor="productName">Product Name</Label>
               <Input
@@ -2546,24 +2738,7 @@ yPos += 5;
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="FormatType">Format Type</Label>
-              <Select 
-                value={newProduct.formatType} 
-                onValueChange={(value: string) => setNewProduct({...newProduct, formatType: value as FormatType})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select format type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None - ie Electrical Package</SelectItem>
-                  <SelectItem value="qty">Quantity - ie 3x Door</SelectItem>
-                  <SelectItem value="length">Length - ie 1x 2m Beam</SelectItem>
-                  <SelectItem value="area">Area - ie 5m² of roofing</SelectItem>
-                  <SelectItem value="name">Name - ie 700mm x 900mm window</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Format Type removed - no longer used */}
             
             <Button 
               onClick={editingProduct ? handleUpdateProduct : handleAddProduct}
@@ -2606,111 +2781,120 @@ yPos += 5;
               </Button>
             )}
           </CardContent>
+          )}
         </Card>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={sections.map((s) => s.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-6">
-              {sections.map(section => {
-            const sectionProducts = products.filter(p => p.section === section.id);
-            if (sectionProducts.length === 0) return null;
-            
-            return (
-              <SortableSection key={section.id} section={section}>
-                <Card className="mb-8">
-                  <CardHeader
-                    className="flex flex-row items-center justify-between cursor-pointer"
-                    onClick={() => toggleSection(section.id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <GripVertical
-                        size={16}
-                        className="cursor-grab"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <CardTitle>{section.name}</CardTitle>
-                    </div>
-
-                    <span className="text-sm text-gray-500">
-                      {openSections.includes(section.id) ? "▲" : "▼"}
-                    </span>
-                  </CardHeader>
-                  {openSections.includes(section.id) && (
-                    <CardContent className="space-y-4">
-                      {sectionProducts.map(product => (
-                        <div key={product.id} className="flex items-start justify-between p-4 border rounded-lg">
-                          <div className="flex-1">
-                            <h3 className="font-medium">{product.name}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              Value Type: {product.valueType === "unit" 
-                                ? "Unit" 
-                                : product.valueType === "meter" 
-                                  ? "Meter (length)" 
-                                  : "Meterage (area m²)"}
-                            </div>
-                            {product.isCustomPricing ? (
-                              <div className="text-sm text-muted-foreground mt-2">
-                                Custom Pricing:
-                                {product.customPrices?.map((tier, i) => (
-                                  <span key={i} className="block">
-                                    {tier.value} {product.valueType === "unit" 
-                                      ? "units" 
-                                      : product.valueType === "meter" 
-                                        ? "m" 
-                                        : "m²"} = £{tier.price.toFixed(2)}
-                                  </span>
-                                ))}
+        <Card className="mb-8">
+          <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setSectionsExpanded(prev => !prev)}>
+            <CardTitle>Sections</CardTitle>
+            <span className="text-sm text-gray-500">{sectionsExpanded ? '▲' : '▼'}</span>
+          </CardHeader>
+          {sectionsExpanded && (
+            <CardContent className="space-y-6">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={sections.map((s) => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-6">
+                    {sections.map(section => {
+                      const sectionProducts = products.filter(p => p.section === section.id);
+                      if (sectionProducts.length === 0) return null;
+                      return (
+                        <SortableSection key={section.id} section={section}>
+                          <Card className="mb-8">
+                            <CardHeader
+                              className="flex flex-row items-center justify-between cursor-pointer"
+                              onClick={() => toggleSection(section.id)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <CardTitle>{section.name}</CardTitle>
                               </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                £{product.price.toFixed(2)} per {product.valueType === "unit" 
-                                  ? "unit" 
-                                  : product.valueType === "meter" 
-                                    ? "meter" 
-                                    : "m²"}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleEditProduct(product)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => handleDeleteProduct(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  )}
-                </Card>
-              </SortableSection>
-              
-          );
-        })}
-      </div>
-        </SortableContext>
-      </DndContext>
 
-          <Card className="mb-8">
+                              <span className="text-sm text-gray-500">
+                                {openSections.includes(section.id) ? "▲" : "▼"}
+                              </span>
+                            </CardHeader>
+                            {openSections.includes(section.id) && (
+                              <CardContent className="space-y-4">
+                                {sectionProducts.map(product => (
+                                  <div key={product.id} className="flex items-start justify-between p-4 border rounded-lg">
+                                    <div className="flex-1">
+                                      <h3 className="font-medium">{product.name}</h3>
+                                      <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
+                                      <div className="text-sm text-muted-foreground mt-1">
+                                        Value Type: {product.valueType === "unit" 
+                                          ? "Unit" 
+                                          : product.valueType === "meter" 
+                                            ? "Meter (length)" 
+                                            : "Meterage (area m²)"}
+                                      </div>
+                                      {product.isCustomPricing ? (
+                                        <div className="text-sm text-muted-foreground mt-2">
+                                          Custom Pricing:
+                                          {product.customPrices?.map((tier, i) => (
+                                            <span key={i} className="block">
+                                              {tier.value} {product.valueType === "unit" 
+                                                ? "units" 
+                                                : product.valueType === "meter" 
+                                                  ? "m" 
+                                                  : "m²"} = £{tier.price.toFixed(2)}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                          £{product.price.toFixed(2)} per {product.valueType === "unit" 
+                                            ? "unit" 
+                                            : product.valueType === "meter" 
+                                              ? "meter" 
+                                              : "m²"}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleEditProduct(product)}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button 
+                                        variant="destructive" 
+                                        size="sm"
+                                        onClick={() => handleDeleteProduct(product.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </CardContent>
+                            )}
+                          </Card>
+                        </SortableSection>
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          )}
+        </Card>
+
+        <Card className="mb-8">
+          <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setTextSectionsExpanded(prev => !prev)}>
+            <CardTitle>Text Sections</CardTitle>
+            <span className="text-sm text-gray-500">{textSectionsExpanded ? '▲' : '▼'}</span>
+          </CardHeader>
+          {textSectionsExpanded && (
             <CardContent className="space-y-4">
-            <div className="space-y-8">
+              <div className="space-y-8">
                 <Label htmlFor="briefText">Brief</Label>
                 <Textarea
                   id="briefText"
@@ -2720,12 +2904,8 @@ yPos += 5;
                   onChange={(e) => setBriefText(e.target.value)}
                 />
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="mb-8">
-            <CardContent className="space-y-4">
-            <div className="space-y-8">
+              <div className="space-y-8">
                 <Label htmlFor="extraCostsText">Optional/Extra Costs</Label>
                 <Textarea
                   id="extraCostsText"
@@ -2735,11 +2915,8 @@ yPos += 5;
                   onChange={(e) => setExtraCostsText(e.target.value)}
                 />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="mb-8">
-            <CardContent className="space-y-4">
-            <div className="space-y-8">
+
+              <div className="space-y-8">
                 <Label htmlFor="pricingText">Establishing End Cost</Label>
                 <Textarea
                   id="pricingText"
@@ -2749,11 +2926,8 @@ yPos += 5;
                   onChange={(e) => setPricingText(e.target.value)}
                 />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="mb-8">
-            <CardContent className="space-y-4">
-            <div className="space-y-8">
+
+              <div className="space-y-8">
                 <Label htmlFor="TermsText">Terms & Conditions</Label>
                 <Textarea
                   id="TermsText"
@@ -2764,7 +2938,45 @@ yPos += 5;
                 />
               </div>
             </CardContent>
+          )}
+        </Card>
+          {/* Final Data Handling card (password-protected) */}
+          <Card className="mb-8">
+            <CardHeader className="flex items-center justify-between cursor-pointer" onClick={() => setDataMigrationExpanded(prev => !prev)}>
+              <CardTitle>Data Migration</CardTitle>
+              <span className="text-sm text-gray-500">{dataMigrationExpanded ? '▲' : '▼'}</span>
+            </CardHeader>
+            {dataMigrationExpanded && (
+              <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Export or import local data. This area is password protected.</p>
+                <div className="flex items-center gap-2">
+                  <Input value={dataUser} readOnly />
+                  <Input type="password" placeholder="password" value={dataPass} onChange={(e) => setDataPass(e.target.value)} />
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button variant="default" onClick={() => {
+                    if (dataPass !== 'password123') { alert('Password incorrect'); return; }
+                    exportLocalStorage();
+                  }}>Export data</Button>
+                  <input
+                    ref={el => { importInputRef.current = el }}
+                    type="file"
+                    accept="application/json"
+                    onChange={(e) => importLocalStorageFile(e.target.files ? e.target.files[0] : null)}
+                    className="hidden"
+                  />
+                  <Button variant="destructive" onClick={() => {
+                    if (dataPass !== 'password123') { alert('Password incorrect'); return; }
+                    if (!confirm('Are you sure you want to import data? This will overwrite local data.')) return;
+                    importInputRef.current?.click();
+                  }}>Import data</Button>
+                </div>
+              </div>
+            </CardContent>
+          )}
           </Card>
+
           <div className="text-center mt-8 text-sm text-muted-foreground">
               Developed by Ted Melville - melvilleted@hotmail.com - 2025-26
           </div>

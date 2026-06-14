@@ -1,5 +1,5 @@
 {
-  "name": "quotation-app",
+  "name": "extension-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -18,6 +18,8 @@
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dom-to-image-more": "^2.16.0",
+    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.552.0",
     "next": "^16.1.6",
