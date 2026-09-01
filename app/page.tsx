@@ -160,26 +160,6 @@ NB: No additional works are undertaken to existing walls or floors apart from ma
 Structure: Built following the highest standards conforming with the latest building regulations to include structural beams, joists & rafters, foundations created to 1.250mm x 600mm depth and width*, with block and beam flooring, block brick-built walls with full insulation throughout.
 `;
 
-const DEFAULT_EXTRA_COSTS = `
-Required
-Cost of building inspector - £985+vat
-Asbestos Survey - £300+vat
-
-Optional
-Move boiler – approx. £1500-£2,000+vat dependent on location and new boiler flue.
-Move manhole to new location - Full assessment needed, normally approx. £1500+vat per connection, £600+vat per further connection
-Drain survey - will be needed if uncertainty of sewer/drain location and how this will affect foundations of the new extension. £400 +vat for full camera survey and report. (1 hour survey)
-Drawings & application - process for drainage works £125+vat
-Thames water application fee - £299.00
-Soakaway – Under building regulations section H, a soak away for surface water is now required budget £1350+vat
-Aco drain – if required £150 per metre.
-Seedun Roof – Dependent on spec & flat roof finish – budget £2-£4,000+vat
-Tiling – on average £100+vat per square meter for labour, adhesive, grout and trims.
-Lay flooring - on average £60+vat per square meter dependent on final tiles (labour only)
-Decorating – Budget £800-£1,00 per room, includes preparing walls, skirting and architrave and painting in 1 colour, 2 coats.
-Under floor heating – Water fed budget £150m2 to supply and fit to newly created area. This is based on a system that is fitted directly over the existing and new floor and applying a screed finish.
-
-`;
 
 const DEFAULT_PRICING_TEXT = `This price is based on material and labour costs at the time of the estimate, using up to date price lists, which are generally stable barring major crises. During the build-ready process there’s usually a gap between contract signing and the start date. Our aim to begin projects promptly, delays beyond our control can happen, affecting start times and costs. If material or labour prices increase due to inflation or other external factors, we ask for flexibility and fairness in addressing these changes. We will always justify any necessary price adjustments, and if costs decrease, adjust prices to ensure fairness.
 
@@ -707,22 +687,28 @@ const saveQuote = () => {
     return;
   }
 
-  // ----- UPDATE EXISTING QUOTE -----
+  const now = new Date().toISOString();
+
+  // ----- SAVE NEW REVISION WITHOUT OVERWRITING THE OLD ONE -----
   if (activeQuote) {
-    const updatedQuote: SavedQuote = {
+    const nextRevision = (activeQuote.revision ?? 1) + 1;
+
+    const revisedQuote: SavedQuote = {
       ...activeQuote,
-      revision: (activeQuote.revision ?? 1) + 1,
-      updatedAt: new Date().toISOString(),
-      title: `${formData.name} - Rev ${activeQuote.revision + 1}`,
+      id: `quote-${Date.now()}`, // New ID creates a separate saved quote
+      customerName: formData.name,
+      revision: nextRevision,
+      title: `${formData.name} - Rev ${nextRevision}`,
+      createdAt: now,
+      updatedAt: now,
       formData: { ...formData }
     };
 
-    setSavedQuotes(prev =>
-      prev.map(q => (q.id === activeQuote.id ? updatedQuote : q))
-    );
+    // Append rather than replace
+    setSavedQuotes(prev => [...prev, revisedQuote]);
+    setActiveQuote(revisedQuote);
 
-    setActiveQuote(updatedQuote);
-    alert(`Quote updated (Revision ${updatedQuote.revision})`);
+    alert(`Quote saved as Revision ${nextRevision}`);
     return;
   }
 
@@ -732,8 +718,8 @@ const saveQuote = () => {
     customerName: formData.name,
     title: `${formData.name} - Rev 1`,
     revision: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
     formData: { ...formData }
   };
 
@@ -742,7 +728,6 @@ const saveQuote = () => {
 
   alert("Quote saved (Revision 1)");
 };
-
 
 
   const loadQuote = (quote: SavedQuote) => {
@@ -1044,11 +1029,65 @@ const saveQuote = () => {
   const [CommissionB, setCommissionB] = useState(1.0); // 1.0% default
   const [CommissionC, setCommissionC] = useState(2.5); // 2.5% default
   const [companyDescription, setCompanyDescription] = useState<string>(DEFAULT_COMPANY_DESCRIPTION.trim()); // Company intro/description for PDF
-  const [extraCostsText, setExtraCostsText] = useState<string>(DEFAULT_EXTRA_COSTS.trim()); // Extra costs text for PDF
   const [briefText, setBriefText] = useState<string>(DEFAULT_BRIEF_TEXT.trim()); // Brief text for PDF
   const [pricingText, setPricingText] = useState<string>(DEFAULT_PRICING_TEXT.trim()); // Pricing text for PDF
   const [termsAndConditions, setTermsAndConditions] = useState<string>(DEFAULT_TERMS_AND_CONDITIONS.trim()); // Terms and conditions text for PDF
   const VAT_RATE = vatRate;
+
+  const [textStorageLoaded, setTextStorageLoaded] =
+  useState<boolean>(false);
+
+const TEXT_STORAGE_KEY = "quotation-text-sections";
+
+// Load previously edited text from localStorage
+useEffect(() => {
+  try {
+    const savedText = localStorage.getItem(TEXT_STORAGE_KEY);
+
+    if (savedText) {
+      const parsed = JSON.parse(savedText);
+
+      if (typeof parsed.briefText === "string") {
+        setBriefText(parsed.briefText);
+      }
+
+      if (typeof parsed.pricingText === "string") {
+        setPricingText(parsed.pricingText);
+      }
+
+      if (typeof parsed.termsAndConditions === "string") {
+        setTermsAndConditions(parsed.termsAndConditions);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load saved PDF text:", error);
+  } finally {
+    setTextStorageLoaded(true);
+  }
+}, []);
+
+// Save the edited text whenever it changes
+useEffect(() => {
+  if (!textStorageLoaded) return;
+
+  try {
+    localStorage.setItem(
+      TEXT_STORAGE_KEY,
+      JSON.stringify({
+        briefText,
+        pricingText,
+        termsAndConditions
+      })
+    );
+  } catch (error) {
+    console.error("Failed to save PDF text:", error);
+  }
+}, [
+  briefText,
+  pricingText,
+  termsAndConditions,
+  textStorageLoaded
+]);
 
   // data handling UI state
   const [dataUser] = useState('admin');
@@ -1306,495 +1345,726 @@ const saveQuote = () => {
   //------------------------------------------------------------
   //------------------------------------------------------------
   //------------------------------------------------------------
-  const generatePDF = () => {
-    // Group items by section for paragraph formatting
-    const itemsBySection: Record<string,{ product: Product; item: QuotationItem }[]> = {};
-    
-    
-    formData.items.forEach(item => {
-      const product = products.find(p => p.id === item.productId);
-      if (!product) return;
+const generatePDF = () => {
+  // Group items by section for paragraph formatting
+  const itemsBySection: Record<
+    string,
+    { product: Product; item: QuotationItem }[]
+  > = {};
 
-      if (!itemsBySection[product.section]) {
-        itemsBySection[product.section] = [];
-      }
+  formData.items.forEach(item => {
+    const product = products.find(p => p.id === item.productId);
+    if (!product) return;
 
-      itemsBySection[product.section].push({ product, item });
-    });
-
-    const subtotal = calculateTotalCost();
-    const vat = calculateTotalVAT();
-    const grandTotal = calculateGrandTotal();
-
-    // Create PDF content with paragraph-style descriptions
-    const doc = new jsPDF();
-       // Add logo if available
-    logos.forEach(logo => {
-      doc.addImage(
-        logo.src, 
-        'PNG', 
-        logo.x, 
-        logo.y, 
-        logo.width, 
-        logo.height
-      );
-    });
-    images.forEach(image => {
-      doc.addImage(
-        image.src, 
-        'PNG', 
-        image.x, 
-        image.y, 
-        image.width, 
-        image.height
-      );
-    });
-
-    
-    // Add client details
-    doc.setFontSize(12);
-    // const nameWidth = doc.getTextWidth(formData.name);
-
-    const wrappedAddress = doc.splitTextToSize(formData.address, 50);
-    
-    const wrappedName = doc.splitTextToSize(formData.name, 50);
-    doc.text(`Client: `, 135, 30);
-    doc.text(wrappedName, 155, 30);
-    doc.text(`Address: `, 135, 42);
-    doc.text(wrappedAddress, 155, 42);
-
-
-
-
-    
-    // Add description section with paragraph format
-    doc.setFontSize(18);
-    doc.setTextColor(0, 0, 255);
-    doc.setFont("times", 'normal');
-    const sectionTitle = 'SMART SOLUTIONS FOR MODERN LIVING';
-    doc.text(sectionTitle, 105, 67, { align: 'center' });
-    const sectionTitleWidth = doc.getTextWidth(sectionTitle);
-    doc.setDrawColor(0, 0, 255);
-    doc.setLineWidth(0.5);
-    doc.line(43, 68, 43 + sectionTitleWidth, 68);
-
-    // Helper: consistent line height and safe multi-line placement
-    function getLineHeight(documentInstance: any, multiplier = 1.15) {
-      const fontSize = typeof documentInstance.getFontSize === 'function' ? documentInstance.getFontSize() : 11;
-      return fontSize * 0.352777778 * multiplier; // pt->mm conversion * multiplier
+    if (!itemsBySection[product.section]) {
+      itemsBySection[product.section] = [];
     }
 
-    function placeTextLines(documentInstance: any, lines: string[] | string, x: number, yStart: number, marginBottom = 20) {
-      const pageHeight = documentInstance.internal.pageSize.getHeight();
-      let y = yStart;
-      const effectiveLines = Array.isArray(lines) ? lines : [lines];
-      const lh = getLineHeight(documentInstance);
-      for (const line of effectiveLines) {
-        if (y + lh > pageHeight - marginBottom) {
-          documentInstance.addPage();
-          y = 20;
-        }
-        documentInstance.text(String(line), x, y);
-        y += lh;
-      }
-      return y;
-    }
+    itemsBySection[product.section].push({ product, item });
+  });
 
+  const subtotal = calculateTotalCost();
+  const vat = calculateTotalVAT();
+  const grandTotal = calculateGrandTotal();
 
+  const doc = new jsPDF();
 
-    doc.setTextColor(0, 0, 0);
-    doc.setDrawColor(0, 0, 0);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", 'italic');
-    doc.text('The whole NLLR team were very', 20, 91,);
-    doc.text('professional in their conduct.', 23, 96,);
-
-    doc.text("I'd recommend NLLR to anybody looking for a trustworthy", 89, 91,);
-    doc.text("team and a high standard of workmanship", 99, 96,);
-
-    doc.text("Effective communication was key to our building", 15, 224,);
-    doc.text("project because we were going to be out of the UK", 13, 229,);
-    doc.text("while it happened, and North London Loft Rooms", 15, 234,);
-    doc.text("didn't disappoint.", 37, 239,);
-
-    doc.text("The conversion and quality finish also", 125, 224,);
-    doc.text("helped the flat to stand out", 136, 229,);
-    doc.text("on rightmove and enabled us to secure a", 122, 234,);
-    doc.text("buyer quickly.", 143, 239,);
-
-
-    doc.addPage();
-    doc.setFont("helvetica", 'normal');
-    doc.setFont("helvetica", 'bold');
-    let yPos = 20;
-    doc.text('BRIEF:', 20, yPos);
-    doc.setFont("helvetica", 'normal');
-    const briefLines = doc.splitTextToSize(briefText, 170);
-    doc.text(briefLines, 20, yPos + 7);
-    yPos += briefLines.length / 2 * 8 + 20;
-
-
-    doc.setFont("helvetica", 'bold');
-    doc.text('DESCRIPTION OF WORK:', 20, yPos);
-    
-
-    doc.setFont("helvetica", 'normal');
-    yPos += 10;
-
-
-    //doc.text('Description of project:', 20, yPos);
-    //yPos += 7;
-    //const descriptionLines = doc.splitTextToSize(companyDescription, 170);
-    //doc.text(descriptionLines, 20, yPos);
-    //yPos += descriptionLines.length / 2 * 8 + 15;
-    // Loop through sections and add items as paragraphs
-
-
-    sections.forEach(section => {
-      const sectionItems = itemsBySection[section.id];
-      if (sectionItems && sectionItems.length > 0) {
-
-
-
-        const SquareMeterage: string[] =[];
-        const SSColumns: string[] = [];
-        const steelBeams: string[] = [];
-        const RHSsteel: string[] = [];
-        const VeluxRL: string[] = [];
-        const RoofLantern: string[] = [];
-        const Slimglaze: string[] = [];
-        const whiteUPVC: string[] = [];
-        const greyAluminium: string[] = [];
-        const glazingVision: string[] = [];
-        const otherItems: string[] = [];
-        const Descriptions: string[] = [];
-
-        let SquareMeterageDesc = "";
-        let SSColumnsDesc = "";
-        let steelBeamsDesc = "";
-        let RHSsteelDesc = "";
-        let VeluxDesc = "";
-        let RoofLanternDesc = "";
-        let SlimglazeDesc = "";
-        let whiteUPVCDesc = "";
-        let greyAluminiumDesc = "";
-        let glazingVisionDesc = "";
-        let DescriptionsDesc = "";
-
-        sectionItems.forEach(({ product, item }) => {
-          const valueUnit = product.valueType === "unit" ? "" : product.valueType === "meter" ? "m" : "m²";
-
-          if (product.name.toLowerCase().includes("structural support columns")) {
-            SSColumns.push(`${item.value}x`);
-            if (!SSColumnsDesc) SSColumnsDesc = product.description;
-          } else if (product.name.toLowerCase().includes("steel beams")) {
-            steelBeams.push(`${item.quantity}x${item.value}${valueUnit}`);
-            if (!steelBeamsDesc) steelBeamsDesc = product.description;
-          } else if (product.name.toLowerCase().includes("rhs steel")) {
-            RHSsteel.push(`${item.value}x`);
-            if (!RHSsteelDesc) RHSsteelDesc = product.description;
-          } else if (product.description.toLowerCase().includes("velux rooflight")) {
-            VeluxRL.push(`${item.quantity}x ${product.name}`);
-            if (!VeluxDesc) VeluxDesc = product.description;
-          } else if (product.description.toLowerCase().includes("roof lantern")) {
-            RoofLantern.push(`${item.value}x ${product.name}`);
-            if (!RoofLanternDesc) RoofLanternDesc = product.description;
-          } else if (product.description.toLowerCase().includes("slimglaze")) {
-            Slimglaze.push(`${item.value}x ${product.name}`);
-            if (!SlimglazeDesc) SlimglazeDesc = product.description;
-          } else if (product.description.toLowerCase().includes("white upvc")) {
-            whiteUPVC.push(`${item.value}x ${product.name}`);
-            if (!whiteUPVCDesc) whiteUPVCDesc = product.description;
-          } else if (product.description.toLowerCase().includes("grey aluminium")) {
-            greyAluminium.push(`${item.value}x ${product.name}`);
-            if (!greyAluminiumDesc) greyAluminiumDesc = product.description;
-          } else if (product.description.toLowerCase().includes("glazing vision")) {
-            glazingVision.push(`${item.value}x ${product.name}`);
-            if (!glazingVisionDesc) glazingVisionDesc = product.description;
-          } else if (section.name.toLowerCase().includes("description")) {
-            Descriptions.push("");
-            if (!DescriptionsDesc) DescriptionsDesc = product.description;
-          } else if (valueUnit === "m²") {
-            SquareMeterage.push(`(${item.value}m²)`);
-            if (!SquareMeterageDesc) SquareMeterageDesc = product.description;
-          }
-          else {
-            if (item.value === 1) {
-            otherItems.push(`${product.description}`);
-            }
-            if (item.value > 1) {
-            otherItems.push(`${item.value}x ${product.description}`);
-          }
-          }
-
-        });
-
-        function formatValueArray(arr: string[], description: string) {
-          if (!arr.length) return null;
-          if (arr.length === 1) return `${arr[0]} ${description}`;
-
-          const last = arr[arr.length - 1];
-          const rest = arr.slice(0, -1);
-
-          return `${rest.join(", ")} and ${last} ${description}`;
-        }
-
-        function formatNameArray(arr: string[], description: string) {
-          if (!arr.length) return null;
-          if (arr.length === 1) return `${arr[0]} ${description}`;
-
-          const last = arr[arr.length - 1];
-          const rest = arr.slice(0, -1);
-
-          return `${rest.join(", ")} and ${last} ${description}`;
-        }
-
-        function formatDescArray(arr: string[], description: string) {
-          if (!arr.length) return null;
-          if (arr.length === 1) return `${arr[0]} ${description}`;
-
-          const last = arr[arr.length - 1];
-          const rest = arr.slice(0, -1);
-
-          return `${rest.join(", ")} and ${last} ${description}`;
-
-        }
-
-        const descriptions = [
-          formatValueArray(SquareMeterage, SquareMeterageDesc || ""),
-          formatValueArray(SSColumns, SSColumnsDesc || "Structural Support Columns"),
-          formatValueArray(steelBeams, steelBeamsDesc || "Steel Beams"),
-          formatValueArray(RHSsteel, RHSsteelDesc || "RHS Steel"),
-          formatNameArray(VeluxRL, VeluxDesc || "Velux Rooflight"),
-          formatNameArray(RoofLantern, RoofLanternDesc || "Roof Lantern"),
-          formatNameArray(Slimglaze, SlimglazeDesc || "Slimglaze SG2Double"),
-          formatNameArray(whiteUPVC, whiteUPVCDesc || "White UPVC Window"),
-          formatNameArray(greyAluminium, greyAluminiumDesc || "Grey Aluminium Window"),
-          formatNameArray(glazingVision, glazingVisionDesc || "Glazing Vision Window"),
-          formatDescArray(Descriptions, DescriptionsDesc || ""),
-          ...otherItems
-        ].filter(Boolean);
-
-        const paragraph = descriptions.join(", ") + ".";
-        const splitText = doc.splitTextToSize(paragraph, 170);
-        const lh = getLineHeight(doc);
-        // ensure there's enough space for title + paragraph, otherwise new page
-        if (yPos + (splitText.length + 1) * lh > doc.internal.pageSize.getHeight() - 20) {
-          doc.addPage();
-          yPos = 20;
-        }
-        
-        if (section.name.toLowerCase().includes("description") === false) {
-          doc.setFontSize(12);
-          doc.setFont("helvetica", 'bold');
-          doc.text(section.name, 20, yPos);
-          yPos += lh;
-          doc.setFont("helvetica", 'normal');
-          doc.setFontSize(11);
-          yPos = placeTextLines(doc, splitText, 20, yPos);
-          yPos += lh * 0.8;
-        } 
-        // DESCRIPTION SECTION PRESENT
-        else if (section.name.toLowerCase().includes("description")) {
-          doc.setFont("helvetica", 'normal');
-          doc.setFontSize(11);
-          yPos = placeTextLines(doc, splitText, 20, yPos);
-          yPos += lh * 0.8;
-        }
-      }
-    });
-
-
-    const pageHeight1 = doc.internal.pageSize.getHeight();
-    const pageWidth1 = doc.internal.pageSize.getWidth();
-    const marginLeft1 = 20;
-    const marginRight1 = 20;
-    const maxWidth1 = pageWidth1 - marginLeft1 - marginRight1;
-    const lineHeight1 = 5;
-    // Add financial summary;
-    doc.setFontSize(14);
-    yPos += 8;
-
-    if (yPos + 40 > doc.internal.pageSize.getHeight() - 20) {
-      doc.addPage();
-      yPos = 20;
-    }
-
-
-    doc.text('PRICING SUMMARY', 20, yPos);
-    yPos += 10;
-
-    doc.setFontSize(12);
-    doc.text(`Subtotal: ${gbpFormatter.format(subtotal)}`, 20, yPos);
-    yPos += 7;
-    doc.text(`VAT (20%): ${gbpFormatter.format(vat)}`, 20, yPos);
-    yPos += 7;
-    doc.setFont("helvetica", 'bold');
-    doc.text(`Total: ${gbpFormatter.format(grandTotal)}`, 20, yPos);
-    yPos += 15;
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-
-    doc.text("Extra Costs:", 20, yPos);
-    yPos += 8;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-
-
-
-    // Wrap text
-    const extraCostsLines = doc.splitTextToSize(
-      extraCostsText ?? "No additional costs specified.",
-      maxWidth1
+  // Add logo if available
+  logos.forEach(logo => {
+    doc.addImage(
+      logo.src,
+      "PNG",
+      logo.x,
+      logo.y,
+      logo.width,
+      logo.height
     );
+  });
 
-    // Paginate ONLY this section
-    extraCostsLines.forEach((line: string) => {
-      if (yPos + lineHeight1 > pageHeight1 - 20) {
+  images.forEach(image => {
+    doc.addImage(
+      image.src,
+      "PNG",
+      image.x,
+      image.y,
+      image.width,
+      image.height
+    );
+  });
+
+  // Add client details
+  doc.setFontSize(12);
+
+  const wrappedAddress = doc.splitTextToSize(formData.address, 50);
+  const wrappedName = doc.splitTextToSize(formData.name, 50);
+
+  doc.text("Client: ", 135, 30);
+  doc.text(wrappedName, 155, 30);
+
+  doc.text("Address: ", 135, 42);
+  doc.text(wrappedAddress, 155, 42);
+
+  // Add description section with paragraph format
+  doc.setFontSize(18);
+  doc.setTextColor(0, 0, 255);
+  doc.setFont("times", "normal");
+
+  const sectionTitle = "SMART SOLUTIONS FOR MODERN LIVING";
+
+  doc.text(sectionTitle, 105, 67, { align: "center" });
+
+  const sectionTitleWidth = doc.getTextWidth(sectionTitle);
+
+  doc.setDrawColor(0, 0, 255);
+  doc.setLineWidth(0.5);
+  doc.line(43, 68, 43 + sectionTitleWidth, 68);
+
+  // Helper: consistent line height and safe multi-line placement
+  function getLineHeight(
+    documentInstance: any,
+    multiplier = 1.15
+  ) {
+    const fontSize =
+      typeof documentInstance.getFontSize === "function"
+        ? documentInstance.getFontSize()
+        : 11;
+
+    return fontSize * 0.352777778 * multiplier;
+  }
+
+  function placeTextLines(
+    documentInstance: any,
+    lines: string[] | string,
+    x: number,
+    yStart: number,
+    marginBottom = 20
+  ) {
+    const pageHeight =
+      documentInstance.internal.pageSize.getHeight();
+
+    let y = yStart;
+
+    const effectiveLines = Array.isArray(lines)
+      ? lines
+      : [lines];
+
+    const lineHeight = getLineHeight(documentInstance);
+
+    for (const line of effectiveLines) {
+      if (y + lineHeight > pageHeight - marginBottom) {
+        documentInstance.addPage();
+        y = 20;
+      }
+
+      documentInstance.text(String(line), x, y);
+      y += lineHeight;
+    }
+
+    return y;
+  }
+
+  doc.setTextColor(0, 0, 0);
+  doc.setDrawColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "italic");
+
+  doc.text("The whole NLLR team were very", 20, 91);
+  doc.text("professional in their conduct.", 23, 96);
+
+  doc.text(
+    "I'd recommend NLLR to anybody looking for a trustworthy",
+    89,
+    91
+  );
+
+  doc.text(
+    "team and a high standard of workmanship",
+    99,
+    96
+  );
+
+  doc.text(
+    "Effective communication was key to our building",
+    15,
+    224
+  );
+
+  doc.text(
+    "project because we were going to be out of the UK",
+    13,
+    229
+  );
+
+  doc.text(
+    "while it happened, and North London Loft Rooms",
+    15,
+    234
+  );
+
+  doc.text("didn't disappoint.", 37, 239);
+
+  doc.text(
+    "The conversion and quality finish also",
+    125,
+    224
+  );
+
+  doc.text(
+    "helped the flat to stand out",
+    136,
+    229
+  );
+
+  doc.text(
+    "on rightmove and enabled us to secure a",
+    122,
+    234
+  );
+
+  doc.text("buyer quickly.", 143, 239);
+
+  doc.addPage();
+
+  doc.setFont("helvetica", "bold");
+
+  let yPos = 20;
+
+  doc.text("BRIEF:", 20, yPos);
+
+  doc.setFont("helvetica", "normal");
+
+  const briefLines = doc.splitTextToSize(briefText, 170);
+
+  doc.text(briefLines, 20, yPos + 7);
+
+  yPos += (briefLines.length / 2) * 8 + 20;
+
+  doc.setFont("helvetica", "bold");
+  doc.text("DESCRIPTION OF WORK:", 20, yPos);
+
+  doc.setFont("helvetica", "normal");
+  yPos += 10;
+
+  // Loop through sections and add items as paragraphs
+  sections.forEach(section => {
+    const sectionItems = itemsBySection[section.id];
+
+    if (sectionItems && sectionItems.length > 0) {
+      const SquareMeterage: string[] = [];
+      const SSColumns: string[] = [];
+      const steelBeams: string[] = [];
+      const RHSsteel: string[] = [];
+      const VeluxRL: string[] = [];
+      const RoofLantern: string[] = [];
+      const Slimglaze: string[] = [];
+      const whiteUPVC: string[] = [];
+      const greyAluminium: string[] = [];
+      const glazingVision: string[] = [];
+      const otherItems: string[] = [];
+      const Descriptions: string[] = [];
+
+      let SquareMeterageDesc = "";
+      let SSColumnsDesc = "";
+      let steelBeamsDesc = "";
+      let RHSsteelDesc = "";
+      let VeluxDesc = "";
+      let RoofLanternDesc = "";
+      let SlimglazeDesc = "";
+      let whiteUPVCDesc = "";
+      let greyAluminiumDesc = "";
+      let glazingVisionDesc = "";
+      let DescriptionsDesc = "";
+
+      sectionItems.forEach(({ product, item }) => {
+        const productName = product.name.toLowerCase();
+        const productDescription =
+          product.description.toLowerCase();
+
+        const valueUnit =
+          product.valueType === "unit"
+            ? ""
+            : product.valueType === "meter"
+              ? "m"
+              : "m²";
+
+        if (
+          productName.includes("structural support columns")
+        ) {
+          SSColumns.push(`${item.value}x`);
+
+          if (!SSColumnsDesc) {
+            SSColumnsDesc = product.description;
+          }
+        } else if (
+          productName.includes("steel beam") ||
+          /\bub\b/i.test(product.name) ||
+          productDescription.includes("universal beam")
+        ) {
+          // Group all UB lengths under one shared description
+          const quantity = item.quantity ?? 1;
+
+          steelBeams.push(
+            `${quantity}x${item.value}m`
+          );
+
+          if (!steelBeamsDesc) {
+            steelBeamsDesc = product.description;
+          }
+        } else if (productName.includes("rhs steel")) {
+          RHSsteel.push(`${item.value}x`);
+
+          if (!RHSsteelDesc) {
+            RHSsteelDesc = product.description;
+          }
+        } else if (
+          productDescription.includes("velux rooflight")
+        ) {
+          VeluxRL.push(
+            `${item.quantity}x ${product.name}`
+          );
+
+          if (!VeluxDesc) {
+            VeluxDesc = product.description;
+          }
+        } else if (
+          productDescription.includes("roof lantern")
+        ) {
+          RoofLantern.push(
+            `${item.value}x ${product.name}`
+          );
+
+          if (!RoofLanternDesc) {
+            RoofLanternDesc = product.description;
+          }
+        } else if (
+          productDescription.includes("slimglaze")
+        ) {
+          Slimglaze.push(
+            `${item.value}x ${product.name}`
+          );
+
+          if (!SlimglazeDesc) {
+            SlimglazeDesc = product.description;
+          }
+        } else if (
+          productDescription.includes("white upvc")
+        ) {
+          whiteUPVC.push(
+            `${item.value}x ${product.name}`
+          );
+
+          if (!whiteUPVCDesc) {
+            whiteUPVCDesc = product.description;
+          }
+        } else if (
+          productDescription.includes("grey aluminium")
+        ) {
+          greyAluminium.push(
+            `${item.value}x ${product.name}`
+          );
+
+          if (!greyAluminiumDesc) {
+            greyAluminiumDesc = product.description;
+          }
+        } else if (
+          productDescription.includes("glazing vision")
+        ) {
+          glazingVision.push(
+            `${item.value}x ${product.name}`
+          );
+
+          if (!glazingVisionDesc) {
+            glazingVisionDesc = product.description;
+          }
+        } else if (
+          section.name.toLowerCase().includes("description")
+        ) {
+          Descriptions.push("");
+
+          if (!DescriptionsDesc) {
+            DescriptionsDesc = product.description;
+          }
+        } else if (valueUnit === "m²") {
+          SquareMeterage.push(`(${item.value}m²)`);
+
+          if (!SquareMeterageDesc) {
+            SquareMeterageDesc = product.description;
+          }
+        } else {
+          if (item.value === 1) {
+            otherItems.push(product.description);
+          }
+
+          if (item.value > 1) {
+            otherItems.push(
+              `${item.value}x ${product.description}`
+            );
+          }
+        }
+      });
+
+      function formatValueArray(
+        arr: string[],
+        description: string
+      ) {
+        if (!arr.length) return null;
+
+        if (arr.length === 1) {
+          return `${arr[0]} ${description}`;
+        }
+
+        const last = arr[arr.length - 1];
+        const rest = arr.slice(0, -1);
+
+        return `${rest.join(", ")} and ${last} ${description}`;
+      }
+
+      function formatNameArray(
+        arr: string[],
+        description: string
+      ) {
+        if (!arr.length) return null;
+
+        if (arr.length === 1) {
+          return `${arr[0]} ${description}`;
+        }
+
+        const last = arr[arr.length - 1];
+        const rest = arr.slice(0, -1);
+
+        return `${rest.join(", ")} and ${last} ${description}`;
+      }
+
+      function formatDescArray(
+        arr: string[],
+        description: string
+      ) {
+        if (!arr.length) return null;
+
+        if (arr.length === 1) {
+          return `${arr[0]} ${description}`;
+        }
+
+        const last = arr[arr.length - 1];
+        const rest = arr.slice(0, -1);
+
+        return `${rest.join(", ")} and ${last} ${description}`;
+      }
+
+      const descriptions = [
+        formatValueArray(
+          SquareMeterage,
+          SquareMeterageDesc || ""
+        ),
+        formatValueArray(
+          SSColumns,
+          SSColumnsDesc || "Structural Support Columns"
+        ),
+        formatValueArray(
+          steelBeams,
+          steelBeamsDesc || "Steel Beams"
+        ),
+        formatValueArray(
+          RHSsteel,
+          RHSsteelDesc || "RHS Steel"
+        ),
+        formatNameArray(
+          VeluxRL,
+          VeluxDesc || "Velux Rooflight"
+        ),
+        formatNameArray(
+          RoofLantern,
+          RoofLanternDesc || "Roof Lantern"
+        ),
+        formatNameArray(
+          Slimglaze,
+          SlimglazeDesc || "Slimglaze SG2Double"
+        ),
+        formatNameArray(
+          whiteUPVC,
+          whiteUPVCDesc || "White UPVC Window"
+        ),
+        formatNameArray(
+          greyAluminium,
+          greyAluminiumDesc || "Grey Aluminium Window"
+        ),
+        formatNameArray(
+          glazingVision,
+          glazingVisionDesc || "Glazing Vision Window"
+        ),
+        formatDescArray(
+          Descriptions,
+          DescriptionsDesc || ""
+        ),
+        ...otherItems
+      ].filter(Boolean);
+
+      const paragraph = descriptions.join(", ") + ".";
+      const splitText = doc.splitTextToSize(paragraph, 170);
+      const lineHeight = getLineHeight(doc);
+
+      if (
+        yPos + (splitText.length + 1) * lineHeight >
+        doc.internal.pageSize.getHeight() - 20
+      ) {
         doc.addPage();
         yPos = 20;
+      }
 
-        // Optional: repeat section title on new page
+      if (
+        !section.name.toLowerCase().includes("description")
+      ) {
+        doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text("Extra Costs (cont.):", marginLeft1, yPos);
-        yPos += 8;
+        doc.text(section.name, 20, yPos);
+
+        yPos += lineHeight;
 
         doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+
+        yPos = placeTextLines(
+          doc,
+          splitText,
+          20,
+          yPos
+        );
+
+        yPos += lineHeight * 0.8;
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+
+        yPos = placeTextLines(
+          doc,
+          splitText,
+          20,
+          yPos
+        );
+
+        yPos += lineHeight * 0.8;
       }
-
-      doc.text(line, marginLeft1, yPos);
-      yPos += lineHeight1;
-    });
-
-    yPos += 5;
-
-// ----- Pricing Text -----
-
-    const pageHeight2 = doc.internal.pageSize.getHeight();
-    const pageWidth2 = doc.internal.pageSize.getWidth();
-
-    const marginLeft2 = 20;
-    const marginRight2 = 20;
-    const maxWidth2 = pageWidth2 - marginLeft2 - marginRight2;
-    const lineHeight2 = 5;
-
-    // Section title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-
-    if (yPos + lineHeight2 > pageHeight2 - 20) {
-      doc.addPage();
-      yPos = 20;
     }
+  });
 
-    doc.text("Establishing This Quote:", marginLeft2, yPos);
-    yPos += lineHeight2 + 3;
+  const pageHeight1 =
+    doc.internal.pageSize.getHeight();
 
-    // Content
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
+  const pageWidth1 =
+    doc.internal.pageSize.getWidth();
 
-    // Wrap text correctly
-    const wrappedText2 = doc.splitTextToSize(
-      pricingText,
-      maxWidth2
-    );
+  const marginLeft1 = 20;
+  const marginRight1 = 20;
+  const maxWidth1 =
+    pageWidth1 - marginLeft1 - marginRight1;
 
-    // Render with pagination
-    wrappedText2.forEach((line: string) => {
-      if (yPos + lineHeight2 > pageHeight2 - 20) {
-        doc.addPage();
-        yPos = 20;
-      }
+  const lineHeight1 = 5;
 
-      doc.text(line, marginLeft2, yPos);
-      yPos += lineHeight2;
-    });
+  // Add financial summary
+  doc.setFontSize(14);
+  yPos += 8;
 
-    
-    const pageHeight4 = doc.internal.pageSize.getHeight();
-
-    if (yPos + 70 > pageHeight4) {
-      doc.addPage();
-      yPos = 20;
-    }
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text('On behalf of:', 20, yPos + 10);
-    doc.text('Michael Smith,', 20, yPos + 15);
-    doc.text('Sales Director,', 20, yPos + 20);
-    doc.text('North London Loft Rooms', 20, yPos + 25);
-
-    logos.forEach(logo => {
-      doc.addImage(
-        logo.src, 
-        'PNG', 
-        10, 
-        yPos + 30, 
-        logo.width, 
-        logo.height
-      );
-    });
-
+  if (
+    yPos + 40 >
+    doc.internal.pageSize.getHeight() - 20
+  ) {
     doc.addPage();
     yPos = 20;
+  }
 
-    
-    // ----- TERMS & CONDITIONS -----
+  doc.text("PRICING SUMMARY", 20, yPos);
+  yPos += 10;
 
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFontSize(12);
 
-    const marginLeft = 20;
-    const marginRight = 20;
-    const maxWidth = pageWidth - marginLeft - marginRight;
-    const lineHeight = 4;
+  doc.text(
+    `Subtotal: ${gbpFormatter.format(subtotal)}`,
+    20,
+    yPos
+  );
 
-    // Section title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
+  yPos += 7;
 
-    if (yPos + lineHeight > pageHeight - 20) {
+  doc.text(
+    `VAT (20%): ${gbpFormatter.format(vat)}`,
+    20,
+    yPos
+  );
+
+  yPos += 7;
+
+  doc.setFont("helvetica", "bold");
+
+  doc.text(
+    `Total: ${gbpFormatter.format(grandTotal)}`,
+    20,
+    yPos
+  );
+
+  yPos += 15;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+
+  
+  yPos += 5;
+
+  // ----- Pricing Text -----
+
+  const pageHeight2 =
+    doc.internal.pageSize.getHeight();
+
+  const pageWidth2 =
+    doc.internal.pageSize.getWidth();
+
+  const marginLeft2 = 20;
+  const marginRight2 = 20;
+
+  const maxWidth2 =
+    pageWidth2 - marginLeft2 - marginRight2;
+
+  const lineHeight2 = 5;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+
+  if (
+    yPos + lineHeight2 >
+    pageHeight2 - 20
+  ) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  doc.text(
+    "Establishing This Quote:",
+    marginLeft2,
+    yPos
+  );
+
+  yPos += lineHeight2 + 3;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+
+  const wrappedText2 = doc.splitTextToSize(
+    pricingText,
+    maxWidth2
+  );
+
+  wrappedText2.forEach((line: string) => {
+    if (
+      yPos + lineHeight2 >
+      pageHeight2 - 20
+    ) {
       doc.addPage();
       yPos = 20;
     }
 
-    doc.text("Terms and Conditions:", marginLeft, yPos);
-    yPos += lineHeight + 3;
+    doc.text(line, marginLeft2, yPos);
+    yPos += lineHeight2;
+  });
 
-    // Content
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+  const pageHeight4 =
+    doc.internal.pageSize.getHeight();
 
-    // Wrap text correctly
-    const wrappedText = doc.splitTextToSize(
-      termsAndConditions,
-      maxWidth
+  if (yPos + 70 > pageHeight4) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+
+  doc.text("On behalf of:", 20, yPos + 10);
+  doc.text("Michael Smith,", 20, yPos + 15);
+  doc.text("Sales Director,", 20, yPos + 20);
+  doc.text(
+    "North London Loft Rooms",
+    20,
+    yPos + 25
+  );
+
+  logos.forEach(logo => {
+    doc.addImage(
+      logo.src,
+      "PNG",
+      10,
+      yPos + 30,
+      logo.width,
+      logo.height
     );
+  });
 
-    // Render with pagination
-    wrappedText.forEach((line: string) => {
-      if (yPos + lineHeight > pageHeight - 20) {
-        doc.addPage();
-        yPos = 20;
-      }
+  doc.addPage();
+  yPos = 20;
 
-      doc.text(line, marginLeft, yPos);
-      yPos += lineHeight;
-    });
+  // ----- TERMS & CONDITIONS -----
 
+  const pageHeight =
+    doc.internal.pageSize.getHeight();
 
-    
-    // Save the PDF
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
 
-    doc.save(`quotation-${formData.name.replace(/\s+/g, "-")}.pdf`);
-    return doc;
-  };
+  const marginLeft = 20;
+  const marginRight = 20;
 
+  const maxWidth =
+    pageWidth - marginLeft - marginRight;
 
+  const lineHeight = 4;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+
+  if (
+    yPos + lineHeight >
+    pageHeight - 20
+  ) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  doc.text(
+    "Terms and Conditions:",
+    marginLeft,
+    yPos
+  );
+
+  yPos += lineHeight + 3;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+
+  const wrappedText = doc.splitTextToSize(
+    termsAndConditions,
+    maxWidth
+  );
+
+  wrappedText.forEach((line: string) => {
+    if (
+      yPos + lineHeight >
+      pageHeight - 20
+    ) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+    doc.text(line, marginLeft, yPos);
+    yPos += lineHeight;
+  });
+
+  // Save the PDF
+  doc.save(
+    `quotation-${formData.name.replace(/\s+/g, "-")}.pdf`
+  );
+
+  return doc;
+};
 
 
   // Save data to localStorage when it changes
@@ -2905,16 +3175,6 @@ const saveQuote = () => {
                 />
               </div>
 
-              <div className="space-y-8">
-                <Label htmlFor="extraCostsText">Optional/Extra Costs</Label>
-                <Textarea
-                  id="extraCostsText"
-                  placeholder="Free text area to enter extra add ons for the quotation PDF..."
-                  className="min-h-[120px]"
-                  value={extraCostsText}
-                  onChange={(e) => setExtraCostsText(e.target.value)}
-                />
-              </div>
 
               <div className="space-y-8">
                 <Label htmlFor="pricingText">Establishing End Cost</Label>
