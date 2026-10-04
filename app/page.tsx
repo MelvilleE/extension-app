@@ -827,7 +827,7 @@ const saveQuote = () => {
         });
 
         if (!cancelled) {
-          setSignatureImg({ src, width: 60, height: 30 });
+          setSignatureImg({ src, width: 90, height: 30 });
         }
       } catch (err) {
         console.warn("Could not load signature image:", err);
@@ -2027,8 +2027,8 @@ const generatePDF = () => {
     doc.addImage(
       signatureImg.src,
       "PNG",
-      10,
-      yPos + 30,
+      20,
+      yPos + 40,
       signatureImg.width,
       signatureImg.height
     );
