@@ -827,7 +827,7 @@ const saveQuote = () => {
         });
 
         if (!cancelled) {
-          setSignatureImg({ src, width: 90, height: 30 });
+          setSignatureImg({ src, width: 75, height: 30 });
         }
       } catch (err) {
         console.warn("Could not load signature image:", err);
