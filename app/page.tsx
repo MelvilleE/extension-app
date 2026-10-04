@@ -762,6 +762,11 @@ const saveQuote = () => {
   }[]>([]);
   const [logosLoading, setLogosLoading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [signatureImg, setSignatureImg] = useState<{
+    src: string;
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Seed default logo from public/nllr_logo.png if none present
   useEffect(() => {
@@ -797,6 +802,39 @@ const saveQuote = () => {
       }
     }
     seedDefaultLogo();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSignatureImage() {
+      try {
+        const res = await fetch("/signature.png");
+        if (!res.ok) throw new Error("Failed to fetch signature image");
+        const blob = await res.blob();
+        const src = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result);
+            } else {
+              reject(new Error("Could not read signature image"));
+            }
+          };
+          reader.onerror = () => reject(reader.error ?? new Error("Could not read signature image"));
+          reader.readAsDataURL(blob);
+        });
+
+        if (!cancelled) {
+          setSignatureImg({ src, width: 60, height: 30 });
+        }
+      } catch (err) {
+        console.warn("Could not load signature image:", err);
+      }
+    }
+
+    loadSignatureImage();
     return () => { cancelled = true; };
   }, []);
 
@@ -1980,24 +2018,21 @@ const generatePDF = () => {
   doc.setFontSize(11);
 
   doc.text("On behalf of:", 20, yPos + 10);
-  doc.text("Michael Smith,", 20, yPos + 15);
-  doc.text("Sales Director,", 20, yPos + 20);
-  doc.text(
-    "North London Loft Rooms",
-    20,
-    yPos + 25
-  );
+  doc.text("Michael Smith MCIOB,", 20, yPos + 15);
+  doc.text("Chartered Construction Manager,", 20, yPos + 20);
+  doc.text("North London Loft Rooms Ltd",20, yPos + 25);
+  doc.text("07547896879", 20, yPos + 30);
 
-  logos.forEach(logo => {
+  if (signatureImg) {
     doc.addImage(
-      logo.src,
+      signatureImg.src,
       "PNG",
       10,
       yPos + 30,
-      logo.width,
-      logo.height
+      signatureImg.width,
+      signatureImg.height
     );
-  });
+  }
 
   doc.addPage();
   yPos = 20;
