@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import CombinedSavedQuotes from "@/components/quotation/CombinedSavedQuotes";
 
 export default function UnifiedDashboard() {
   return (
@@ -33,6 +34,8 @@ export default function UnifiedDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        <CombinedSavedQuotes />
 
         <Card>
           <CardHeader><CardTitle>Existing Data</CardTitle></CardHeader>
