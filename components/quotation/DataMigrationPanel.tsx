@@ -37,7 +37,7 @@ export default function DataMigrationPanel() {
         </p>
         <div className="space-y-2">
           <Label>Data belongs to</Label>
-          <Select value={type} onValueChange={(value: QuoteType) => setType(value)}>
+          <Select value={type} onValueChange={(value) => setType(value as QuoteType)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
