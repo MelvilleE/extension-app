@@ -16,41 +16,31 @@ export default function UnifiedDashboard() {
 
         <div className="grid gap-5 md:grid-cols-2">
           <Card>
-            <CardHeader>
-              <CardTitle>Extension</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <CardHeader><CardTitle>Extension</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">Create, revise and export extension quotations.</p>
-              <Button asChild className="w-full">
-                <Link href="/unified/extension">Open Extension Quotes</Link>
-              </Button>
+              <Button asChild className="w-full"><Link href="/unified/extension">Open Extension Quotes</Link></Button>
+              <Button asChild variant="outline" className="w-full"><Link href="/unified/extension/admin">Extension Admin</Link></Button>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Loft</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <CardHeader><CardTitle>Loft</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">Create, revise and export loft quotations.</p>
-              <Button asChild className="w-full">
-                <Link href="/unified/loft">Open Loft Quotes</Link>
-              </Button>
+              <Button asChild className="w-full"><Link href="/unified/loft">Open Loft Quotes</Link></Button>
+              <Button asChild variant="outline" className="w-full"><Link href="/unified/loft/admin">Loft Admin</Link></Button>
             </CardContent>
           </Card>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Existing Data</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Existing Data</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               Import exports from the current Loft and Extension apps into their new isolated storage namespaces.
             </p>
-            <Button asChild variant="outline">
-              <Link href="/unified/migrate">Migrate Existing Data</Link>
-            </Button>
+            <Button asChild variant="outline"><Link href="/unified/migrate">Migrate Existing Data</Link></Button>
           </CardContent>
         </Card>
       </div>
