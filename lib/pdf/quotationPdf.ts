@@ -21,7 +21,16 @@ interface QuotationPdfOptions {
   config: QuoteTypeConfig;
   logoDataUrl?: string | null;
   signatureDataUrl?: string | null;
+  fileName?: string;
   save?: boolean;
+}
+
+function safeFileName(value: string) {
+  return value
+    .trim()
+    .replace(/[<>:"/\\|?*]+/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/\.+$/g, "") || "quotation";
 }
 
 export function generateQuotationPdf({
@@ -33,6 +42,7 @@ export function generateQuotationPdf({
   config,
   logoDataUrl,
   signatureDataUrl,
+  fileName,
   save = true,
 }: QuotationPdfOptions) {
   const doc = new jsPDF();
@@ -122,7 +132,8 @@ export function generateQuotationPdf({
   }
 
   if (save) {
-    doc.save(`${config.id}-quotation-${formData.name.replace(/\s+/g, "-") || "client"}.pdf`);
+    const fallback = `${config.id}-quotation-${formData.name.replace(/\s+/g, "-") || "client"}`;
+    doc.save(`${safeFileName(fileName ?? fallback)}.pdf`);
   }
 
   return doc;
