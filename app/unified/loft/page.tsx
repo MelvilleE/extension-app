@@ -1,5 +1,5 @@
-import UnifiedQuotationApp from "@/components/quotation/UnifiedQuotationApp";
+import UnifiedQuotationAppClassic from "@/components/quotation/UnifiedQuotationAppClassic";
 
 export default function UnifiedLoftPage() {
-  return <UnifiedQuotationApp type="loft" />;
+  return <UnifiedQuotationAppClassic type="loft" />;
 }
