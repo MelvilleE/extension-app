@@ -177,6 +177,16 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function moveQuoteToFolder(id: string, folderId?: string) {
+    const now = new Date().toISOString();
+    const next = quotes.map((quote) => quote.id === id ? { ...quote, folderId, updatedAt: now } : quote);
+    setQuotes(next);
+    saveQuotes(type, next);
+    if (activeQuote?.id === id) {
+      setActiveQuote((previous) => previous ? { ...previous, folderId, updatedAt: now } : previous);
+    }
+  }
+
   function deleteQuote(id: string) {
     if (!confirm("Delete this saved revision?")) return;
     const next = quotes.filter((quote) => quote.id !== id);
@@ -238,6 +248,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
           onToDateChange={setToDate}
           onSortChange={setSort}
           onLoadQuote={loadQuote}
+          onMoveQuoteToFolder={moveQuoteToFolder}
           onDeleteQuote={deleteQuote}
           onCustomerPdf={customerPdf}
           onInternalWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: logo, includeCosts: true })}
