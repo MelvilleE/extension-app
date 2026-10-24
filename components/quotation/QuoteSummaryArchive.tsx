@@ -1,12 +1,14 @@
 "use client";
 
-import { Download, Save, Search, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Download, Folder, Save, Search, Trash2 } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { calculateItemTotal, gbpFormatter, type QuoteTotals } from "@/lib/quotation/calculations";
-import type { FinancialSettings, Product, QuotationFormData, SavedQuote } from "@/types/quotation";
+import type { FinancialSettings, Product, QuoteFolder, QuotationFormData, SavedQuote } from "@/types/quotation";
 import type { QuoteSort } from "@/lib/quotation/search";
 
 interface Props {
@@ -16,6 +18,7 @@ interface Props {
   financials: FinancialSettings;
   totals: QuoteTotals;
   quotes: SavedQuote[];
+  folders: QuoteFolder[];
   activeQuote: SavedQuote | null;
   search: string;
   fromDate: string;
@@ -35,6 +38,22 @@ interface Props {
 
 export default function QuoteSummaryArchive(props: Props) {
   const { totals, financials, formData, products } = props;
+  const [folderFilter, setFolderFilter] = useState("all");
+
+  const folderGroups = useMemo(() => {
+    const visible = folderFilter === "all"
+      ? props.quotes
+      : props.quotes.filter((quote) => (quote.folderId ?? "unfiled") === folderFilter);
+
+    const groups: Array<{ id: string; name: string; quotes: SavedQuote[] }> = [];
+    for (const folder of props.folders) {
+      const quotes = visible.filter((quote) => quote.folderId === folder.id);
+      if (quotes.length) groups.push({ id: folder.id, name: folder.name, quotes });
+    }
+    const unfiled = visible.filter((quote) => !quote.folderId);
+    if (unfiled.length) groups.push({ id: "unfiled", name: "Unfiled", quotes: unfiled });
+    return groups;
+  }, [props.quotes, props.folders, folderFilter]);
 
   return (
     <Card className="mt-8">
@@ -80,29 +99,58 @@ export default function QuoteSummaryArchive(props: Props) {
         </div>
 
         <div className="mt-8 border-t pt-6">
-          <h3 className="mb-4 text-lg font-medium">Saved Quotes</h3>
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-medium">Saved Quotes</h3>
+            <span className="text-sm text-muted-foreground">Organised by client / property folder</span>
+          </div>
+
           <div className="mb-4 grid gap-3 md:grid-cols-[1fr_145px_145px_175px]">
-            <div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Search client, address or revision…" value={props.search} onChange={(event) => props.onSearchChange(event.target.value)} /></div>
+            <div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Search client, address or revision name…" value={props.search} onChange={(event) => props.onSearchChange(event.target.value)} /></div>
             <Input type="date" value={props.fromDate} onChange={(event) => props.onFromDateChange(event.target.value)} />
             <Input type="date" value={props.toDate} onChange={(event) => props.onToDateChange(event.target.value)} />
             <Select value={props.sort} onValueChange={(value) => props.onSortChange(value as QuoteSort)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="updated-desc">Recently updated</SelectItem><SelectItem value="created-desc">Newest</SelectItem><SelectItem value="created-asc">Oldest</SelectItem><SelectItem value="name-asc">Customer A-Z</SelectItem></SelectContent></Select>
           </div>
 
-          <div className="max-h-96 space-y-3 overflow-y-auto">
-            {props.quotes.length === 0 && <p className="text-sm text-muted-foreground">No matching saved quotes.</p>}
-            {props.quotes.map((quote) => (
-              <div key={quote.id} className={`rounded-lg border p-4 ${props.activeQuote?.id === quote.id ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <button className="flex-1 cursor-pointer text-left" onClick={() => props.onLoadQuote(quote)}>
-                    <h4 className="font-medium">{quote.customerName} — Rev {quote.revision}</h4>
-                    <p className="text-sm text-gray-600">Updated: {new Date(quote.updatedAt).toLocaleString()}</p>
-                    <p className="mt-1 text-sm text-gray-500">{quote.formData.address || "No address"} · {quote.formData.items.length} items</p>
-                  </button>
-                  <Button size="icon" variant="outline" onClick={() => props.onDeleteQuote(quote.id)}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </div>
-            ))}
+          <div className="mb-4 max-w-sm">
+            <Select value={folderFilter} onValueChange={setFolderFilter}>
+              <SelectTrigger><SelectValue placeholder="All folders" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All folders</SelectItem>
+                {props.folders.map((folder) => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}
+                <SelectItem value="unfiled">Unfiled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {folderGroups.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No matching saved quotes.</p>
+          ) : (
+            <Accordion type="multiple" className="space-y-3" defaultValue={folderGroups.map((group) => group.id)}>
+              {folderGroups.map((group) => (
+                <AccordionItem key={group.id} value={group.id} className="rounded-lg border bg-white px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2"><Folder className="h-4 w-4" />{group.name}<span className="text-xs font-normal text-muted-foreground">({group.quotes.length})</span></span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      {group.quotes.map((quote) => (
+                        <div key={quote.id} className={`rounded-lg border p-4 ${props.activeQuote?.id === quote.id ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <button className="flex-1 cursor-pointer text-left" onClick={() => props.onLoadQuote(quote)}>
+                              <h4 className="font-medium">{quote.title || `${quote.customerName} — Rev ${quote.revision}`}</h4>
+                              <p className="text-sm text-gray-600">Updated: {new Date(quote.updatedAt).toLocaleString()}</p>
+                              <p className="mt-1 text-sm text-gray-500">{quote.formData.address || "No address"} · {quote.formData.items.length} items</p>
+                            </button>
+                            <Button size="icon" variant="outline" onClick={() => props.onDeleteQuote(quote.id)}><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </div>
       </CardContent>
     </Card>
