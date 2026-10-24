@@ -1,6 +1,7 @@
 import type {
   FinancialSettings,
   Product,
+  QuoteFolder,
   QuoteTextSettings,
   QuoteType,
   SavedQuote,
@@ -8,6 +9,7 @@ import type {
 } from "@/types/quotation";
 
 const PREFIX = "quotation";
+const FOLDERS_KEY = `${PREFIX}:folders`;
 
 export const storageKeys = (type: QuoteType) => ({
   sections: `${PREFIX}:${type}:sections`,
@@ -57,6 +59,14 @@ export function saveQuotes(type: QuoteType, value: SavedQuote[]) {
   writeJson(storageKeys(type).quotes, value);
 }
 
+export function loadFolders() {
+  return readJson<QuoteFolder[]>(FOLDERS_KEY) ?? [];
+}
+
+export function saveFolders(value: QuoteFolder[]) {
+  writeJson(FOLDERS_KEY, value);
+}
+
 export function loadTextSettings(type: QuoteType) {
   return readJson<QuoteTextSettings>(storageKeys(type).text);
 }
@@ -95,11 +105,15 @@ function normaliseLegacyValue<T>(value: T | string | undefined): T | undefined {
   }
 }
 
-/**
- * Import an export produced by the original Loft/Extension apps into the new
- * namespaced storage. The caller explicitly supplies the quote type, so two
- * old exports can safely coexist in one unified application.
- */
+function legacyGroupId(type: QuoteType, customerName: string, address: string) {
+  const identity = `${customerName}-${address}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `${type}:${identity || "untitled"}`;
+}
+
+/** Import an export from either original app into namespaced unified storage. */
 export function importLegacyExport(type: QuoteType, exported: LegacyLocalStorageExport) {
   const sections = normaliseLegacyValue<Section[]>(exported.quotationSections);
   const products = normaliseLegacyValue<Product[]>(exported.quotationProducts);
@@ -114,13 +128,16 @@ export function importLegacyExport(type: QuoteType, exported: LegacyLocalStorage
     const id = quote.id ?? `legacy-${type}-${Date.now()}-${index}`;
     const revision = quote.revision ?? 1;
     const customerName = quote.customerName ?? quote.formData?.name ?? "Untitled client";
+    const address = quote.formData?.address ?? "";
     return {
       id,
       quoteType: type,
-      quoteGroupId: quote.quoteGroupId ?? `${type}:${customerName.toLowerCase().replace(/\s+/g, "-")}`,
+      quoteGroupId: quote.quoteGroupId ?? legacyGroupId(type, customerName, address),
       customerName,
       title: quote.title ?? `${customerName} - Rev ${revision}`,
       revision,
+      revisionName: quote.revisionName,
+      folderId: quote.folderId,
       createdAt: quote.createdAt ?? new Date().toISOString(),
       updatedAt: quote.updatedAt ?? quote.createdAt ?? new Date().toISOString(),
       formData: quote.formData ?? { name: customerName, address: "", items: [] },
