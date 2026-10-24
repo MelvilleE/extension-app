@@ -197,7 +197,17 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
 
   function customerPdf() {
     if (!textMigrated && !confirm("Original quotation text has not been migrated yet. Generate using fallback text?")) return;
-    generateQuotationPdf({ formData, products, sections, financials, text, config, logoDataUrl: logo, signatureDataUrl: signature });
+    generateQuotationPdf({
+      formData,
+      products,
+      sections,
+      financials,
+      text,
+      config,
+      logoDataUrl: logo,
+      signatureDataUrl: signature,
+      fileName: activeQuote ? `${activeQuote.title} - ${config.label} Quotation` : undefined,
+    });
   }
 
   if (!loaded) return <div className="p-8">Loading quotation data…</div>;
@@ -251,8 +261,22 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
           onMoveQuoteToFolder={moveQuoteToFolder}
           onDeleteQuote={deleteQuote}
           onCustomerPdf={customerPdf}
-          onInternalWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: logo, includeCosts: true })}
-          onClientWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: logo, includeCosts: false })}
+          onInternalWorkings={() => generateWorkingDetailsPdf({
+            formData,
+            products,
+            financials,
+            logoDataUrl: logo,
+            includeCosts: true,
+            fileName: activeQuote ? `${activeQuote.title} - Internal Workings` : undefined,
+          })}
+          onClientWorkings={() => generateWorkingDetailsPdf({
+            formData,
+            products,
+            financials,
+            logoDataUrl: logo,
+            includeCosts: false,
+            fileName: activeQuote ? `${activeQuote.title} - Client Workings` : undefined,
+          })}
           onSaveQuote={openSaveDialog}
         />
 
