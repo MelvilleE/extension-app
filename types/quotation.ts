@@ -40,13 +40,22 @@ export interface QuotationFormData {
   items: QuotationItem[];
 }
 
+export interface QuoteFolder {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SavedQuote {
   id: string;
   quoteType: QuoteType;
   customerName: string;
   title: string;
   revision: number;
+  revisionName?: string;
   quoteGroupId: string;
+  folderId?: string;
   createdAt: string;
   updatedAt: string;
   formData: QuotationFormData;
