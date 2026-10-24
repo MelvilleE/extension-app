@@ -10,7 +10,16 @@ interface WorkingDetailsOptions {
   financials: FinancialSettings;
   logoDataUrl?: string | null;
   includeCosts?: boolean;
+  fileName?: string;
   save?: boolean;
+}
+
+function safeFileName(value: string) {
+  return value
+    .trim()
+    .replace(/[<>:"/\\|?*]+/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/\.+$/g, "") || "quotation";
 }
 
 /**
@@ -24,6 +33,7 @@ export function generateWorkingDetailsPdf({
   financials,
   logoDataUrl,
   includeCosts = true,
+  fileName,
   save = true,
 }: WorkingDetailsOptions) {
   const doc = new jsPDF();
@@ -142,7 +152,8 @@ export function generateWorkingDetailsPdf({
 
   if (save) {
     const prefix = includeCosts ? "WD-internal" : "WD-client";
-    doc.save(`${prefix}-${formData.name.replace(/\s+/g, "-") || "quotation"}.pdf`);
+    const fallback = `${prefix}-${formData.name.replace(/\s+/g, "-") || "quotation"}`;
+    doc.save(`${safeFileName(fileName ?? fallback)}.pdf`);
   }
 
   return doc;
