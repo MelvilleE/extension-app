@@ -29,6 +29,7 @@ interface Props {
   onToDateChange: (value: string) => void;
   onSortChange: (value: QuoteSort) => void;
   onLoadQuote: (quote: SavedQuote) => void;
+  onMoveQuoteToFolder: (id: string, folderId?: string) => void;
   onDeleteQuote: (id: string) => void;
   onCustomerPdf: () => void;
   onInternalWorkings: () => void;
@@ -135,13 +136,24 @@ export default function QuoteSummaryArchive(props: Props) {
                     <div className="space-y-3">
                       {group.quotes.map((quote) => (
                         <div key={quote.id} className={`rounded-lg border p-4 ${props.activeQuote?.id === quote.id ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
-                          <div className="flex items-start justify-between gap-3">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <button className="flex-1 cursor-pointer text-left" onClick={() => props.onLoadQuote(quote)}>
                               <h4 className="font-medium">{quote.title || `${quote.customerName} — Rev ${quote.revision}`}</h4>
                               <p className="text-sm text-gray-600">Updated: {new Date(quote.updatedAt).toLocaleString()}</p>
                               <p className="mt-1 text-sm text-gray-500">{quote.formData.address || "No address"} · {quote.formData.items.length} items</p>
                             </button>
-                            <Button size="icon" variant="outline" onClick={() => props.onDeleteQuote(quote.id)}><Trash2 className="h-4 w-4" /></Button>
+                            <div className="flex items-center gap-2">
+                              <select
+                                aria-label="Move quote to folder"
+                                value={quote.folderId ?? ""}
+                                onChange={(event) => props.onMoveQuoteToFolder(quote.id, event.target.value || undefined)}
+                                className="h-9 max-w-[190px] rounded-md border border-input bg-background px-2 text-sm"
+                              >
+                                <option value="">Unfiled</option>
+                                {props.folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+                              </select>
+                              <Button size="icon" variant="outline" onClick={() => props.onDeleteQuote(quote.id)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
                           </div>
                         </div>
                       ))}
