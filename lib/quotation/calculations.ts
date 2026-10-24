@@ -53,6 +53,8 @@ export function calculateQuoteTotals(
   };
 }
 
+export type QuoteTotals = ReturnType<typeof calculateQuoteTotals>;
+
 export const gbpFormatter = new Intl.NumberFormat("en-GB", {
   style: "currency",
   currency: "GBP",
