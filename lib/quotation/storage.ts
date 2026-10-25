@@ -18,6 +18,8 @@ export const storageKeys = (type: QuoteType) => ({
   quotes: `${PREFIX}:${type}:savedQuotes`,
   text: `${PREFIX}:${type}:textSections`,
   financials: `${PREFIX}:${type}:financials`,
+  logos: `${PREFIX}:${type}:logos`,
+  // Kept only so preview data created during the refactor is not orphaned.
   coverImage: `${PREFIX}:${type}:coverImage`,
 });
 
@@ -83,6 +85,14 @@ export function loadFinancialSettings(type: QuoteType) {
 
 export function saveFinancialSettings(type: QuoteType, value: FinancialSettings) {
   writeJson(storageKeys(type).financials, value);
+}
+
+export function loadLogos(type: QuoteType) {
+  return readJson<CoverImageSettings[]>(storageKeys(type).logos) ?? [];
+}
+
+export function saveLogos(type: QuoteType, value: CoverImageSettings[]) {
+  writeJson(storageKeys(type).logos, value);
 }
 
 export function loadCoverImage(type: QuoteType) {
@@ -155,7 +165,7 @@ export function importLegacyExport(type: QuoteType, exported: LegacyLocalStorage
       folderId: quote.folderId,
       createdAt: quote.createdAt ?? new Date().toISOString(),
       updatedAt: quote.updatedAt ?? quote.createdAt ?? new Date().toISOString(),
-      formData: quote.formData ?? { name: customerName, address: "", items: [] },
+      formData: quote.formData ?? { name: customerName, address: "", items: [], images: [] },
     };
   });
 
