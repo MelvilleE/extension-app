@@ -21,42 +21,29 @@ interface QuotationPdfOptions {
   text: QuoteTextSettings;
   config: QuoteTypeConfig;
   logoDataUrl?: string | null;
+  logos?: CoverImageSettings[];
   signatureDataUrl?: string | null;
-  coverImage?: CoverImageSettings | null;
   fileName?: string;
   save?: boolean;
 }
 
 function safeFileName(value: string) {
-  return value
-    .trim()
-    .replace(/[<>:"/\\|?*]+/g, "-")
-    .replace(/\s+/g, " ")
-    .replace(/\.+$/g, "") || "quotation";
+  return value.trim().replace(/[<>:"/\\|?*]+/g, "-").replace(/\s+/g, " ").replace(/\.+$/g, "") || "quotation";
 }
 
 function imageFormat(src: string) {
   return /^data:image\/jpe?g/i.test(src) ? "JPEG" : "PNG";
 }
 
-export function generateQuotationPdf({
-  formData,
-  products,
-  sections,
-  financials,
-  text,
-  config,
-  logoDataUrl,
-  signatureDataUrl,
-  coverImage,
-  fileName,
-  save = true,
-}: QuotationPdfOptions) {
+export function generateQuotationPdf({ formData, products, sections, financials, text, config, logoDataUrl, logos = [], signatureDataUrl, fileName, save = true }: QuotationPdfOptions) {
   const doc = new jsPDF();
   const totals = calculateQuoteTotals(formData.items, products, financials);
 
-  // Original-style first page.
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", 15, 15, 60, 30);
+  if (logos.length) {
+    logos.forEach((logo) => doc.addImage(logo.src, imageFormat(logo.src), logo.x, logo.y, logo.width, logo.height));
+  } else if (logoDataUrl) {
+    doc.addImage(logoDataUrl, "PNG", 15, 15, 60, 30);
+  }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
@@ -81,29 +68,19 @@ export function generateQuotationPdf({
   doc.setDrawColor(0, 0, 0);
   doc.setFontSize(11);
   doc.setFont("helvetica", "italic");
-
   doc.text("The whole NLLR team were very", 20, 91);
   doc.text("professional in their conduct.", 23, 96);
-
   doc.text("I'd recommend NLLR to anybody looking for a trustworthy", 89, 91);
   doc.text("team and a high standard of workmanship", 99, 96);
 
-  if (coverImage?.src) {
-    doc.addImage(
-      coverImage.src,
-      imageFormat(coverImage.src),
-      coverImage.x,
-      coverImage.y,
-      coverImage.width,
-      coverImage.height,
-    );
-  }
+  (formData.images ?? []).forEach((image) => {
+    if (image.src) doc.addImage(image.src, imageFormat(image.src), image.x, image.y, image.width, image.height);
+  });
 
   doc.text("Effective communication was key to our building", 15, 224);
   doc.text("project because we were going to be out of the UK", 13, 229);
   doc.text("while it happened, and North London Loft Rooms", 15, 234);
   doc.text("didn't disappoint.", 37, 239);
-
   doc.text("The conversion and quality finish also", 125, 224);
   doc.text("helped the flat to stand out", 136, 229);
   doc.text("on rightmove and enabled us to secure a", 122, 234);
@@ -111,7 +88,6 @@ export function generateQuotationPdf({
 
   doc.addPage();
   let y = 20;
-
   y = writeHeading(doc, "BRIEF", 20, y, 12);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10.5);
@@ -120,19 +96,16 @@ export function generateQuotationPdf({
 
   y = writeHeading(doc, "DESCRIPTION OF WORK", 20, y, 12);
   doc.setFontSize(10.5);
-
   buildSectionParagraphs(sections, products, formData.items).forEach((section) => {
     const paragraphLines = doc.splitTextToSize(section.paragraph, 170) as string[];
     const required = paragraphLines.length * 4.7 + (section.hideHeading ? 0 : 8);
     y = ensureSpace(doc, y, required);
-
     if (!section.hideHeading) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text(section.sectionName, 20, y);
       y += getLineHeight(doc) + 1;
     }
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10.5);
     y = writeWrappedText(doc, section.paragraph, 20, y, 170, { lineHeight: 4.7, paragraphGap: 2 });
@@ -143,13 +116,10 @@ export function generateQuotationPdf({
   y = writeHeading(doc, "PRICING SUMMARY", 20, y, 12);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10.5);
-  doc.text(`Subtotal: ${gbpFormatter.format(totals.totalCost)}`, 20, y);
-  y += 6;
-  doc.text(`VAT (${financials.vatRate}%): ${gbpFormatter.format(totals.totalVat)}`, 20, y);
-  y += 6;
+  doc.text(`Subtotal: ${gbpFormatter.format(totals.totalCost)}`, 20, y); y += 6;
+  doc.text(`VAT (${financials.vatRate}%): ${gbpFormatter.format(totals.totalVat)}`, 20, y); y += 6;
   doc.setFont("helvetica", "bold");
-  doc.text(`Total: ${gbpFormatter.format(totals.grandTotal)}`, 20, y);
-  y += 12;
+  doc.text(`Total: ${gbpFormatter.format(totals.grandTotal)}`, 20, y); y += 12;
 
   y = writeHeading(doc, "ESTABLISHING THIS QUOTE", 20, y, 12);
   doc.setFont("helvetica", "normal");
@@ -158,16 +128,11 @@ export function generateQuotationPdf({
 
   y = ensureSpace(doc, y + 8, signatureDataUrl ? 55 : 32);
   doc.setFontSize(10);
-  doc.text("On behalf of:", 20, y);
-  y += 5;
-  doc.text(companySettings.signatoryName, 20, y);
-  y += 5;
-  doc.text(companySettings.signatoryTitle, 20, y);
-  y += 5;
-  doc.text(companySettings.name, 20, y);
-  y += 5;
+  doc.text("On behalf of:", 20, y); y += 5;
+  doc.text(companySettings.signatoryName, 20, y); y += 5;
+  doc.text(companySettings.signatoryTitle, 20, y); y += 5;
+  doc.text(companySettings.name, 20, y); y += 5;
   doc.text(companySettings.phone, 20, y);
-
   if (signatureDataUrl) doc.addImage(signatureDataUrl, "PNG", 20, y + 5, 75, 30);
 
   if (text.termsAndConditions.trim()) {
@@ -183,6 +148,5 @@ export function generateQuotationPdf({
     const fallback = `${config.id}-quotation-${formData.name.replace(/\s+/g, "-") || "client"}`;
     doc.save(`${safeFileName(fileName ?? fallback)}.pdf`);
   }
-
   return doc;
 }
