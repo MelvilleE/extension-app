@@ -34,10 +34,21 @@ export interface QuotationItem {
   showQuantity: boolean;
 }
 
+export interface CoverImageSettings {
+  id?: string;
+  name: string;
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface QuotationFormData {
   name: string;
   address: string;
   items: QuotationItem[];
+  images?: CoverImageSettings[];
 }
 
 export interface QuoteFolder {
@@ -59,15 +70,6 @@ export interface SavedQuote {
   createdAt: string;
   updatedAt: string;
   formData: QuotationFormData;
-}
-
-export interface CoverImageSettings {
-  name: string;
-  src: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 }
 
 export interface CompanySettings {
