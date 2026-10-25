@@ -1,4 +1,5 @@
 import type {
+  CoverImageSettings,
   FinancialSettings,
   Product,
   QuoteFolder,
@@ -17,6 +18,7 @@ export const storageKeys = (type: QuoteType) => ({
   quotes: `${PREFIX}:${type}:savedQuotes`,
   text: `${PREFIX}:${type}:textSections`,
   financials: `${PREFIX}:${type}:financials`,
+  coverImage: `${PREFIX}:${type}:coverImage`,
 });
 
 function readJson<T>(key: string): T | null {
@@ -81,6 +83,19 @@ export function loadFinancialSettings(type: QuoteType) {
 
 export function saveFinancialSettings(type: QuoteType, value: FinancialSettings) {
   writeJson(storageKeys(type).financials, value);
+}
+
+export function loadCoverImage(type: QuoteType) {
+  return readJson<CoverImageSettings>(storageKeys(type).coverImage);
+}
+
+export function saveCoverImage(type: QuoteType, value: CoverImageSettings | null) {
+  if (typeof window === "undefined") return;
+  if (!value) {
+    window.localStorage.removeItem(storageKeys(type).coverImage);
+    return;
+  }
+  writeJson(storageKeys(type).coverImage, value);
 }
 
 export interface LegacyLocalStorageExport {
