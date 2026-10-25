@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, Folder, Save, Search, Trash2 } from "lucide-react";
+import { Copy, Download, Folder, Save, Search, Trash2 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +29,7 @@ interface Props {
   onToDateChange: (value: string) => void;
   onSortChange: (value: QuoteSort) => void;
   onLoadQuote: (quote: SavedQuote) => void;
+  onUseAsTemplate: (quote: SavedQuote) => void;
   onMoveQuoteToFolder: (id: string, folderId?: string) => void;
   onDeleteQuote: (id: string) => void;
   onCustomerPdf: () => void;
@@ -142,7 +143,8 @@ export default function QuoteSummaryArchive(props: Props) {
                               <p className="text-sm text-gray-600">Updated: {new Date(quote.updatedAt).toLocaleString()}</p>
                               <p className="mt-1 text-sm text-gray-500">{quote.formData.address || "No address"} · {quote.formData.items.length} items</p>
                             </button>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button size="sm" variant="outline" onClick={() => props.onUseAsTemplate(quote)}><Copy className="mr-2 h-4 w-4" />Use as template</Button>
                               <select
                                 aria-label="Move quote to folder"
                                 value={quote.folderId ?? ""}
