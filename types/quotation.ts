@@ -61,6 +61,15 @@ export interface SavedQuote {
   formData: QuotationFormData;
 }
 
+export interface CoverImageSettings {
+  name: string;
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface CompanySettings {
   name: string;
   signatoryName: string;
