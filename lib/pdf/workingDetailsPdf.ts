@@ -145,7 +145,7 @@ export function generateWorkingDetailsPdf({
     });
   }
 
-  const signature = signatureSettings ?? {
+  const signature: SignatureSettings = signatureSettings ?? {
     signatoryName: companySettings.signatoryName,
     signatoryTitle: companySettings.signatoryTitle,
     companyName: companySettings.name,
