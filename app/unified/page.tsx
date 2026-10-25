@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import CombinedSavedQuotes from "@/components/quotation/CombinedSavedQuotes";
+import FolderManager from "@/components/quotation/FolderManager";
 
 export default function UnifiedDashboard() {
   return (
@@ -34,6 +35,8 @@ export default function UnifiedDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        <FolderManager />
 
         <CombinedSavedQuotes />
 
