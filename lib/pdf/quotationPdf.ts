@@ -11,6 +11,7 @@ import type {
   QuoteTypeConfig,
   QuotationFormData,
   Section,
+  SignatureSettings,
 } from "@/types/quotation";
 
 interface QuotationPdfOptions {
@@ -23,6 +24,7 @@ interface QuotationPdfOptions {
   logoDataUrl?: string | null;
   logos?: CoverImageSettings[];
   signatureDataUrl?: string | null;
+  signatureSettings?: SignatureSettings | null;
   fileName?: string;
   save?: boolean;
 }
@@ -35,7 +37,7 @@ function imageFormat(src: string) {
   return /^data:image\/jpe?g/i.test(src) ? "JPEG" : "PNG";
 }
 
-export function generateQuotationPdf({ formData, products, sections, financials, text, config, logoDataUrl, logos = [], signatureDataUrl, fileName, save = true }: QuotationPdfOptions) {
+export function generateQuotationPdf({ formData, products, sections, financials, text, config, logoDataUrl, logos = [], signatureDataUrl, signatureSettings, fileName, save = true }: QuotationPdfOptions) {
   const doc = new jsPDF();
   const totals = calculateQuoteTotals(formData.items, products, financials);
 
@@ -126,14 +128,25 @@ export function generateQuotationPdf({ formData, products, sections, financials,
   doc.setFontSize(10);
   y = writeWrappedText(doc, text.pricingText, 20, y, 170, { lineHeight: 4.5, paragraphGap: 3.5 });
 
-  y = ensureSpace(doc, y + 8, signatureDataUrl ? 55 : 32);
+  const signature = signatureSettings ?? {
+    signatoryName: companySettings.signatoryName,
+    signatoryTitle: companySettings.signatoryTitle,
+    companyName: companySettings.name,
+    phone: companySettings.phone,
+    email: "",
+    imageWidth: 75,
+    imageHeight: 30,
+  };
+  const signatureImage = signature.imageSrc ?? signatureDataUrl ?? undefined;
+  y = ensureSpace(doc, y + 8, signatureImage ? signature.imageHeight + 38 : 38);
   doc.setFontSize(10);
   doc.text("On behalf of:", 20, y); y += 5;
-  doc.text(companySettings.signatoryName, 20, y); y += 5;
-  doc.text(companySettings.signatoryTitle, 20, y); y += 5;
-  doc.text(companySettings.name, 20, y); y += 5;
-  doc.text(companySettings.phone, 20, y);
-  if (signatureDataUrl) doc.addImage(signatureDataUrl, "PNG", 20, y + 5, 75, 30);
+  if (signature.signatoryName.trim()) { doc.text(signature.signatoryName, 20, y); y += 5; }
+  if (signature.signatoryTitle.trim()) { doc.text(signature.signatoryTitle, 20, y); y += 5; }
+  if (signature.companyName.trim()) { doc.text(signature.companyName, 20, y); y += 5; }
+  if (signature.phone.trim()) { doc.text(signature.phone, 20, y); y += 5; }
+  if (signature.email.trim()) { doc.text(signature.email, 20, y); y += 5; }
+  if (signatureImage) doc.addImage(signatureImage, imageFormat(signatureImage), 20, y + 2, signature.imageWidth, signature.imageHeight);
 
   if (text.termsAndConditions.trim()) {
     doc.addPage();
