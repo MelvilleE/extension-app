@@ -13,6 +13,8 @@ interface Props {
   nextRevision: number;
   folders: QuoteFolder[];
   defaultFolderId?: string;
+  startingNewQuote?: boolean;
+  sourceTitle?: string;
   onClose: () => void;
   onCreateFolder: (name: string) => QuoteFolder;
   onSave: (options: { revisionName: string; folderId?: string }) => void;
@@ -24,6 +26,8 @@ export default function SaveQuoteDialog({
   nextRevision,
   folders,
   defaultFolderId,
+  startingNewQuote = false,
+  sourceTitle,
   onClose,
   onCreateFolder,
   onSave,
@@ -54,13 +58,19 @@ export default function SaveQuoteDialog({
       <div className="w-full max-w-md rounded-xl border bg-background p-6 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Save Quote</h2>
+            <h2 className="text-xl font-semibold">{startingNewQuote ? "Save New Quote" : "Save Quote"}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {customerName || "Untitled client"} · Revision {nextRevision}
             </p>
           </div>
           <Button size="icon" variant="ghost" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
+
+        {startingNewQuote && (
+          <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+            The client name or property address is different from {sourceTitle ? `“${sourceTitle}”` : "the quote you opened"}. This will be saved as a new quote at <strong>Revision 1</strong>, not as another revision of the original client.
+          </div>
+        )}
 
         <div className="space-y-5">
           <div className="space-y-2">
@@ -112,7 +122,7 @@ export default function SaveQuoteDialog({
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={() => onSave({ revisionName: revisionName.trim(), folderId: folderId || undefined })}>
-              Save Rev {nextRevision}
+              {startingNewQuote ? "Save New Quote" : `Save Rev ${nextRevision}`}
             </Button>
           </div>
         </div>
