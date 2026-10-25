@@ -16,7 +16,7 @@ import { getQuoteTypeConfig } from "@/config/quote-types";
 import { generateQuotationPdf } from "@/lib/pdf/quotationPdf";
 import { generateWorkingDetailsPdf } from "@/lib/pdf/workingDetailsPdf";
 import { calculateItemTotal, calculateQuoteTotals } from "@/lib/quotation/calculations";
-import { buildSavedQuoteTitle, getNextRevision } from "@/lib/quotation/revisions";
+import { buildSavedQuoteTitle, getNextRevision, hasQuoteIdentityChanged } from "@/lib/quotation/revisions";
 import { filterAndSortQuotes, type QuoteSort } from "@/lib/quotation/search";
 import {
   loadFinancialSettings,
@@ -102,7 +102,8 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
 
   const totals = useMemo(() => calculateQuoteTotals(formData.items, products, financials), [formData.items, products, financials]);
   const filteredQuotes = useMemo(() => filterAndSortQuotes(quotes, { query: search, fromDate, toDate, sort }), [quotes, search, fromDate, toDate, sort]);
-  const nextRevision = activeQuote ? getNextRevision(quotes, activeQuote.quoteGroupId) : 1;
+  const identityChanged = activeQuote ? hasQuoteIdentityChanged(activeQuote, formData) : false;
+  const nextRevision = activeQuote && !identityChanged ? getNextRevision(quotes, activeQuote.quoteGroupId) : 1;
 
   function addItem(productId: string) {
     setFormData((previous) => ({ ...previous, items: [...previous.items, { id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, productId, value: 1, quantity: 1, showQuantity: true }] }));
@@ -147,8 +148,11 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
     if (!formData.name.trim()) return;
 
     const now = new Date().toISOString();
-    const quoteGroupId = activeQuote?.quoteGroupId ?? `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const revision = activeQuote ? getNextRevision(quotes, quoteGroupId) : 1;
+    const startsNewFamily = !activeQuote || hasQuoteIdentityChanged(activeQuote, formData);
+    const quoteGroupId = startsNewFamily
+      ? `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+      : activeQuote.quoteGroupId;
+    const revision = startsNewFamily ? 1 : getNextRevision(quotes, quoteGroupId);
     const revisionName = options.revisionName.trim();
     const saved: SavedQuote = {
       id: `quote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -206,7 +210,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
       config,
       logoDataUrl: logo,
       signatureDataUrl: signature,
-      fileName: activeQuote ? `${activeQuote.title} - ${config.label} Quotation` : undefined,
+      fileName: !identityChanged && activeQuote ? `${activeQuote.title} - ${config.label} Quotation` : undefined,
     });
   }
 
@@ -219,7 +223,8 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
           <div>
             <p className="text-sm text-muted-foreground">{companySettings.name}</p>
             <h1 className="text-3xl font-bold text-primary">{config.label} Quote Generator</h1>
-            {activeQuote && <p className="mt-1 text-sm text-muted-foreground">Editing from {activeQuote.title}; saving creates Rev {nextRevision}.</p>}
+            {activeQuote && !identityChanged && <p className="mt-1 text-sm text-muted-foreground">Editing from {activeQuote.title}; saving creates Rev {nextRevision}.</p>}
+            {activeQuote && identityChanged && <p className="mt-1 text-sm font-medium text-amber-700">Client/property changed from {activeQuote.title}; saving will create a new quote at Rev 1.</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={newQuote}>New Quote</Button>
@@ -267,7 +272,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
             financials,
             logoDataUrl: logo,
             includeCosts: true,
-            fileName: activeQuote ? `${activeQuote.title} - Internal Workings` : undefined,
+            fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Internal Workings` : undefined,
           })}
           onClientWorkings={() => generateWorkingDetailsPdf({
             formData,
@@ -275,7 +280,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
             financials,
             logoDataUrl: logo,
             includeCosts: false,
-            fileName: activeQuote ? `${activeQuote.title} - Client Workings` : undefined,
+            fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Client Workings` : undefined,
           })}
           onSaveQuote={openSaveDialog}
         />
@@ -288,7 +293,9 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
         customerName={formData.name}
         nextRevision={nextRevision}
         folders={folders}
-        defaultFolderId={activeQuote?.folderId}
+        defaultFolderId={identityChanged ? undefined : activeQuote?.folderId}
+        startingNewQuote={Boolean(activeQuote && identityChanged)}
+        sourceTitle={activeQuote?.title}
         onClose={() => setSaveDialogOpen(false)}
         onCreateFolder={createFolder}
         onSave={saveCurrentQuote}
