@@ -4,6 +4,7 @@ import { buildSectionParagraphs } from "@/lib/pdf/descriptionFormatter";
 import { ensureSpace, getLineHeight, writeHeading, writeWrappedText } from "@/lib/pdf/layout";
 import { calculateQuoteTotals, gbpFormatter } from "@/lib/quotation/calculations";
 import type {
+  CoverImageSettings,
   FinancialSettings,
   Product,
   QuoteTextSettings,
@@ -21,6 +22,7 @@ interface QuotationPdfOptions {
   config: QuoteTypeConfig;
   logoDataUrl?: string | null;
   signatureDataUrl?: string | null;
+  coverImage?: CoverImageSettings | null;
   fileName?: string;
   save?: boolean;
 }
@@ -33,6 +35,10 @@ function safeFileName(value: string) {
     .replace(/\.+$/g, "") || "quotation";
 }
 
+function imageFormat(src: string) {
+  return /^data:image\/jpe?g/i.test(src) ? "JPEG" : "PNG";
+}
+
 export function generateQuotationPdf({
   formData,
   products,
@@ -42,24 +48,66 @@ export function generateQuotationPdf({
   config,
   logoDataUrl,
   signatureDataUrl,
+  coverImage,
   fileName,
   save = true,
 }: QuotationPdfOptions) {
   const doc = new jsPDF();
   const totals = calculateQuoteTotals(formData.items, products, financials);
 
+  // Original-style first page.
   if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", 15, 15, 60, 30);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
-  doc.text(`${config.label} Quotation`, 190, 22, { align: "right" });
-
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Client:", 130, 34);
-  writeWrappedText(doc, formData.name, 148, 34, 42, { lineHeight: 4 });
-  doc.text("Address:", 130, 45);
-  writeWrappedText(doc, formData.address, 148, 45, 42, { lineHeight: 4 });
+  doc.setFontSize(12);
+  const wrappedName = doc.splitTextToSize(formData.name, 50) as string[];
+  const wrappedAddress = doc.splitTextToSize(formData.address, 50) as string[];
+  doc.text("Client: ", 135, 30);
+  doc.text(wrappedName, 155, 30);
+  doc.text("Address: ", 135, 42);
+  doc.text(wrappedAddress, 155, 42);
+
+  doc.setFontSize(18);
+  doc.setTextColor(0, 0, 255);
+  doc.setFont("times", "normal");
+  const sectionTitle = "SMART SOLUTIONS FOR MODERN LIVING";
+  doc.text(sectionTitle, 105, 67, { align: "center" });
+  const sectionTitleWidth = doc.getTextWidth(sectionTitle);
+  doc.setDrawColor(0, 0, 255);
+  doc.setLineWidth(0.5);
+  doc.line(105 - sectionTitleWidth / 2, 68, 105 + sectionTitleWidth / 2, 68);
+
+  doc.setTextColor(0, 0, 0);
+  doc.setDrawColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "italic");
+
+  doc.text("The whole NLLR team were very", 20, 91);
+  doc.text("professional in their conduct.", 23, 96);
+
+  doc.text("I'd recommend NLLR to anybody looking for a trustworthy", 89, 91);
+  doc.text("team and a high standard of workmanship", 99, 96);
+
+  if (coverImage?.src) {
+    doc.addImage(
+      coverImage.src,
+      imageFormat(coverImage.src),
+      coverImage.x,
+      coverImage.y,
+      coverImage.width,
+      coverImage.height,
+    );
+  }
+
+  doc.text("Effective communication was key to our building", 15, 224);
+  doc.text("project because we were going to be out of the UK", 13, 229);
+  doc.text("while it happened, and North London Loft Rooms", 15, 234);
+  doc.text("didn't disappoint.", 37, 239);
+
+  doc.text("The conversion and quality finish also", 125, 224);
+  doc.text("helped the flat to stand out", 136, 229);
+  doc.text("on rightmove and enabled us to secure a", 122, 234);
+  doc.text("buyer quickly.", 143, 239);
 
   doc.addPage();
   let y = 20;
