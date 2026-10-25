@@ -7,10 +7,12 @@ import type {
   QuoteType,
   SavedQuote,
   Section,
+  SignatureSettings,
 } from "@/types/quotation";
 
 const PREFIX = "quotation";
 const FOLDERS_KEY = `${PREFIX}:folders`;
+const SIGNATURE_KEY = `${PREFIX}:companySignature`;
 
 export const storageKeys = (type: QuoteType) => ({
   sections: `${PREFIX}:${type}:sections`,
@@ -93,6 +95,14 @@ export function loadLogos(type: QuoteType) {
 
 export function saveLogos(type: QuoteType, value: CoverImageSettings[]) {
   writeJson(storageKeys(type).logos, value);
+}
+
+export function loadSignatureSettings() {
+  return readJson<SignatureSettings>(SIGNATURE_KEY);
+}
+
+export function saveSignatureSettings(value: SignatureSettings) {
+  writeJson(SIGNATURE_KEY, value);
 }
 
 export function loadCoverImage(type: QuoteType) {
