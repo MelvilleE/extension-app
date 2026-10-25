@@ -2,13 +2,15 @@ import { jsPDF } from "jspdf";
 import { companySettings } from "@/config/company";
 import { calculateItemTotal, calculateQuoteTotals, gbpFormatter } from "@/lib/quotation/calculations";
 import { ensureSpace, getLineHeight, writeWrappedText } from "@/lib/pdf/layout";
-import type { FinancialSettings, Product, QuotationFormData } from "@/types/quotation";
+import type { FinancialSettings, Product, QuotationFormData, SignatureSettings } from "@/types/quotation";
 
 interface WorkingDetailsOptions {
   formData: QuotationFormData;
   products: Product[];
   financials: FinancialSettings;
   logoDataUrl?: string | null;
+  signatureSettings?: SignatureSettings | null;
+  signatureDataUrl?: string | null;
   includeCosts?: boolean;
   fileName?: string;
   save?: boolean;
@@ -22,6 +24,10 @@ function safeFileName(value: string) {
     .replace(/\.+$/g, "") || "quotation";
 }
 
+function imageFormat(src: string) {
+  return /^data:image\/jpe?g/i.test(src) ? "JPEG" : "PNG";
+}
+
 /**
  * One renderer for both Working Details variants.
  * - includeCosts=true: internal copy with prices, supplier/base-cost/markup and summary.
@@ -32,6 +38,8 @@ export function generateWorkingDetailsPdf({
   products,
   financials,
   logoDataUrl,
+  signatureSettings,
+  signatureDataUrl,
   includeCosts = true,
   fileName,
   save = true,
@@ -137,18 +145,27 @@ export function generateWorkingDetailsPdf({
     });
   }
 
-  y = ensureSpace(doc, y + 12, 28);
+  const signature = signatureSettings ?? {
+    signatoryName: companySettings.signatoryName,
+    signatoryTitle: companySettings.signatoryTitle,
+    companyName: companySettings.name,
+    phone: companySettings.phone,
+    email: "",
+    imageWidth: 75,
+    imageHeight: 30,
+  };
+  const signatureImage = signature.imageSrc ?? signatureDataUrl ?? undefined;
+  y = ensureSpace(doc, y + 12, signatureImage ? signature.imageHeight + 38 : 38);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text("On behalf of:", 20, y);
   y += 5;
-  doc.text(companySettings.signatoryName, 20, y);
-  y += 5;
-  doc.text(companySettings.signatoryTitle, 20, y);
-  y += 5;
-  doc.text(companySettings.name, 20, y);
-  y += 5;
-  doc.text(companySettings.phone, 20, y);
+  if (signature.signatoryName.trim()) { doc.text(signature.signatoryName, 20, y); y += 5; }
+  if (signature.signatoryTitle.trim()) { doc.text(signature.signatoryTitle, 20, y); y += 5; }
+  if (signature.companyName.trim()) { doc.text(signature.companyName, 20, y); y += 5; }
+  if (signature.phone.trim()) { doc.text(signature.phone, 20, y); y += 5; }
+  if (signature.email.trim()) { doc.text(signature.email, 20, y); y += 5; }
+  if (signatureImage) doc.addImage(signatureImage, imageFormat(signatureImage), 20, y + 2, signature.imageWidth, signature.imageHeight);
 
   if (save) {
     const prefix = includeCosts ? "WD-internal" : "WD-client";
