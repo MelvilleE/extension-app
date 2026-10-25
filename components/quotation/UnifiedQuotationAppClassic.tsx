@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import BespokeImageManagement from "@/components/quotation/BespokeImageManagement";
 import ProductSelectionAccordion from "@/components/quotation/ProductSelectionAccordion";
 import QuoteSummaryArchive from "@/components/quotation/QuoteSummaryArchive";
 import SaveQuoteDialog from "@/components/quotation/SaveQuoteDialog";
@@ -19,9 +20,9 @@ import { calculateItemTotal, calculateQuoteTotals } from "@/lib/quotation/calcul
 import { buildSavedQuoteTitle, getNextRevision, hasQuoteIdentityChanged } from "@/lib/quotation/revisions";
 import { filterAndSortQuotes, type QuoteSort } from "@/lib/quotation/search";
 import {
-  loadCoverImage,
   loadFinancialSettings,
   loadFolders,
+  loadLogos,
   loadProducts,
   loadQuotes,
   loadSections,
@@ -42,6 +43,7 @@ import type {
 } from "@/types/quotation";
 
 const defaultFinancials: FinancialSettings = { vatRate: 20, commissionA: 0.5, commissionB: 1, commissionC: 2.5 };
+const emptyForm = (): QuotationFormData => ({ name: "", address: "", items: [], images: [] });
 
 async function assetToDataUrl(path: string) {
   try {
@@ -65,11 +67,11 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
   const [products, setProducts] = useState<Product[]>(defaultProducts);
   const [quotes, setQuotes] = useState<SavedQuote[]>([]);
   const [folders, setFolders] = useState<QuoteFolder[]>([]);
+  const [logos, setLogos] = useState<CoverImageSettings[]>([]);
   const [activeQuote, setActiveQuote] = useState<SavedQuote | null>(null);
-  const [formData, setFormData] = useState<QuotationFormData>({ name: "", address: "", items: [] });
+  const [formData, setFormData] = useState<QuotationFormData>(emptyForm());
   const [financials, setFinancials] = useState<FinancialSettings>(defaultFinancials);
   const [text, setText] = useState<QuoteTextSettings>({ briefText: config.defaultBrief, pricingText: config.defaultPricingText, termsAndConditions: "" });
-  const [coverImage, setCoverImage] = useState<CoverImageSettings | null>(null);
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -90,7 +92,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
     setCatalogueMigrated(Boolean(storedSections?.length || storedProducts?.length));
     setQuotes(loadQuotes(type));
     setFolders(loadFolders());
-    setCoverImage(loadCoverImage(type));
+    setLogos(loadLogos(type));
     setFinancials(loadFinancialSettings(type) ?? defaultFinancials);
     if (storedText) {
       setText(storedText);
@@ -108,6 +110,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
   const filteredQuotes = useMemo(() => filterAndSortQuotes(quotes, { query: search, fromDate, toDate, sort }), [quotes, search, fromDate, toDate, sort]);
   const identityChanged = activeQuote ? hasQuoteIdentityChanged(activeQuote, formData) : false;
   const nextRevision = activeQuote && !identityChanged ? getNextRevision(quotes, activeQuote.quoteGroupId) : 1;
+  const workingLogo = logos[0]?.src ?? logo;
 
   function addItem(productId: string) {
     setFormData((previous) => ({ ...previous, items: [...previous.items, { id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, productId, value: 1, quantity: 1, showQuantity: true }] }));
@@ -123,12 +126,12 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
 
   function newQuote() {
     setActiveQuote(null);
-    setFormData({ name: "", address: "", items: [] });
+    setFormData(emptyForm());
   }
 
   function useQuoteAsTemplate(quote: SavedQuote) {
     setActiveQuote(null);
-    setFormData(structuredClone(quote.formData));
+    setFormData({ ...structuredClone(quote.formData), images: [] });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -142,12 +145,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
 
   function createFolder(name: string) {
     const now = new Date().toISOString();
-    const folder: QuoteFolder = {
-      id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name: name.trim(),
-      createdAt: now,
-      updatedAt: now,
-    };
+    const folder: QuoteFolder = { id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: name.trim(), createdAt: now, updatedAt: now };
     const next = [...folders, folder];
     setFolders(next);
     saveFolders(next);
@@ -156,12 +154,9 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
 
   function saveCurrentQuote(options: { revisionName: string; folderId?: string }) {
     if (!formData.name.trim()) return;
-
     const now = new Date().toISOString();
     const startsNewFamily = !activeQuote || hasQuoteIdentityChanged(activeQuote, formData);
-    const quoteGroupId = startsNewFamily
-      ? `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-      : activeQuote.quoteGroupId;
+    const quoteGroupId = startsNewFamily ? `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` : activeQuote.quoteGroupId;
     const revision = startsNewFamily ? 1 : getNextRevision(quotes, quoteGroupId);
     const revisionName = options.revisionName.trim();
     const saved: SavedQuote = {
@@ -175,9 +170,8 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
       revisionName: revisionName || undefined,
       createdAt: now,
       updatedAt: now,
-      formData: structuredClone(formData),
+      formData: structuredClone({ ...formData, images: formData.images ?? [] }),
     };
-
     const next = [...quotes, saved];
     setQuotes(next);
     saveQuotes(type, next);
@@ -187,7 +181,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
 
   function loadQuote(quote: SavedQuote) {
     setActiveQuote(quote);
-    setFormData(structuredClone(quote.formData));
+    setFormData({ ...structuredClone(quote.formData), images: quote.formData.images ?? [] });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -196,9 +190,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
     const next = quotes.map((quote) => quote.id === id ? { ...quote, folderId, updatedAt: now } : quote);
     setQuotes(next);
     saveQuotes(type, next);
-    if (activeQuote?.id === id) {
-      setActiveQuote((previous) => previous ? { ...previous, folderId, updatedAt: now } : previous);
-    }
+    if (activeQuote?.id === id) setActiveQuote((previous) => previous ? { ...previous, folderId, updatedAt: now } : previous);
   }
 
   function deleteQuote(id: string) {
@@ -219,8 +211,8 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
       text,
       config,
       logoDataUrl: logo,
+      logos,
       signatureDataUrl: signature,
-      coverImage,
       fileName: !identityChanged && activeQuote ? `${activeQuote.title} - ${config.label} Quotation` : undefined,
     });
   }
@@ -233,7 +225,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">{companySettings.name}</p>
-            <h1 className="text-3xl font-bold text-primary">{config.label} Quote Generator</h1>
+            <h1 className="text-3xl font-bold text-primary">{config.label} Quotations - Client Side</h1>
             {activeQuote && !identityChanged && <p className="mt-1 text-sm text-muted-foreground">Editing from {activeQuote.title}; saving creates Rev {nextRevision}.</p>}
             {activeQuote && identityChanged && <p className="mt-1 text-sm font-medium text-amber-700">Client/property changed from {activeQuote.title}; saving will create a new quote at Rev 1.</p>}
             {!activeQuote && formData.items.length > 0 && <p className="mt-1 text-sm text-muted-foreground">Template/new quote mode; the first save will be Rev 1.</p>}
@@ -251,9 +243,11 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
           <CardHeader><CardTitle>Client Details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div><Label htmlFor="client-name">Full Name</Label><Input id="client-name" value={formData.name} onChange={(event) => setFormData((previous) => ({ ...previous, name: event.target.value }))} placeholder="e.g. John Smith" /></div>
-            <div><Label htmlFor="client-address">Client Address</Label><Textarea id="client-address" value={formData.address} onChange={(event) => setFormData((previous) => ({ ...previous, address: event.target.value }))} placeholder="e.g. 123 Main Street, London" /></div>
+            <div><Label htmlFor="client-address">Client Address</Label><Textarea id="client-address" value={formData.address} onChange={(event) => setFormData((previous) => ({ ...previous, address: event.target.value }))} placeholder="e.g 123 Main Street, London" /></div>
           </CardContent>
         </Card>
+
+        <BespokeImageManagement images={formData.images ?? []} onChange={(images) => setFormData((previous) => ({ ...previous, images }))} />
 
         <ProductSelectionAccordion sections={sections} products={products} items={formData.items} onAddItem={addItem} onUpdateItem={updateItem} onRemoveItem={removeItem} calculateItemTotal={(item) => calculateItemTotal(item, products)} />
 
@@ -279,22 +273,8 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
           onMoveQuoteToFolder={moveQuoteToFolder}
           onDeleteQuote={deleteQuote}
           onCustomerPdf={customerPdf}
-          onInternalWorkings={() => generateWorkingDetailsPdf({
-            formData,
-            products,
-            financials,
-            logoDataUrl: logo,
-            includeCosts: true,
-            fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Internal Workings` : undefined,
-          })}
-          onClientWorkings={() => generateWorkingDetailsPdf({
-            formData,
-            products,
-            financials,
-            logoDataUrl: logo,
-            includeCosts: false,
-            fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Client Workings` : undefined,
-          })}
+          onInternalWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: workingLogo, includeCosts: true, fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Internal Workings` : undefined })}
+          onClientWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: workingLogo, includeCosts: false, fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Client Workings` : undefined })}
           onSaveQuote={openSaveDialog}
         />
 
