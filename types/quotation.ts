@@ -81,6 +81,18 @@ export interface CompanySettings {
   signaturePath: string;
 }
 
+export interface SignatureSettings {
+  signatoryName: string;
+  signatoryTitle: string;
+  companyName: string;
+  phone: string;
+  email: string;
+  imageName?: string;
+  imageSrc?: string;
+  imageWidth: number;
+  imageHeight: number;
+}
+
 export interface QuoteTypeConfig {
   id: QuoteType;
   label: string;
