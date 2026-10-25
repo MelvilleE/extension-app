@@ -11,28 +11,23 @@ interface Props {
   onChange: (logos: CoverImageSettings[]) => void;
 }
 
+function readLogo(file: File) {
+  return new Promise<CoverImageSettings>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return reject(new Error("Invalid logo"));
+      resolve({ id: `logo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: file.name, src: reader.result, x: 15, y: 15, width: 60, height: 30 });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function LogoManagement({ logos, onChange }: Props) {
-  function upload(files: FileList | null) {
+  async function upload(files: FileList | null) {
     if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result !== "string") return;
-        onChange([
-          ...logos,
-          {
-            id: `logo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            name: file.name,
-            src: reader.result,
-            x: 15,
-            y: 15,
-            width: 60,
-            height: 30,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
+    const uploaded = await Promise.all(Array.from(files).map(readLogo));
+    onChange([...logos, ...uploaded]);
   }
 
   function updateLogo(index: number, patch: Partial<CoverImageSettings>) {
@@ -51,15 +46,12 @@ export default function LogoManagement({ logos, onChange }: Props) {
               <div><Label>Width</Label><Input type="number" min="5" max="210" value={logo.width} onChange={(event) => updateLogo(index, { width: Number(event.target.value) || 0 })} /></div>
               <div><Label>Height</Label><Input type="number" min="5" max="297" value={logo.height} onChange={(event) => updateLogo(index, { height: Number(event.target.value) || 0 })} /></div>
             </div>
-            <Button variant="destructive" size="sm" onClick={() => onChange(logos.filter((_, logoIndex) => logoIndex !== index))}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <Button variant="destructive" size="sm" onClick={() => onChange(logos.filter((_, logoIndex) => logoIndex !== index))}><Trash2 className="h-4 w-4" /></Button>
           </div>
         ))}
 
         <label className="flex h-10 w-full cursor-pointer items-center justify-center rounded-md border-2 border-dashed px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
-          <Plus className="mr-2 h-4 w-4" />
-          Upload Logos
+          <Plus className="mr-2 h-4 w-4" />Upload Logos
           <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
         </label>
       </div>
