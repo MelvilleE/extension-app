@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Edit, Plus, Save, Trash2 } from "lucide-react";
+import AdminDropdownCard from "@/components/quotation/AdminDropdownCard";
+import CoverImageManager from "@/components/quotation/CoverImageManager";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,16 +16,26 @@ import { companySettings } from "@/config/company";
 import { defaultProducts, defaultSections } from "@/config/default-catalog";
 import { getQuoteTypeConfig } from "@/config/quote-types";
 import {
+  loadCoverImage,
   loadFinancialSettings,
   loadProducts,
   loadSections,
   loadTextSettings,
+  saveCoverImage,
   saveFinancialSettings,
   saveProducts,
   saveSections,
   saveTextSettings,
 } from "@/lib/quotation/storage";
-import type { FinancialSettings, Product, QuoteTextSettings, QuoteType, Section, ValueType } from "@/types/quotation";
+import type {
+  CoverImageSettings,
+  FinancialSettings,
+  Product,
+  QuoteTextSettings,
+  QuoteType,
+  Section,
+  ValueType,
+} from "@/types/quotation";
 
 const defaultFinancials: FinancialSettings = { vatRate: 20, commissionA: 0.5, commissionB: 1, commissionC: 2.5 };
 
@@ -48,6 +60,7 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
   const [products, setProducts] = useState<Product[]>(defaultProducts);
   const [financials, setFinancials] = useState<FinancialSettings>(defaultFinancials);
   const [text, setText] = useState<QuoteTextSettings>({ briefText: config.defaultBrief, pricingText: config.defaultPricingText, termsAndConditions: "" });
+  const [coverImage, setCoverImage] = useState<CoverImageSettings | null>(null);
   const [newSection, setNewSection] = useState("");
   const [draft, setDraft] = useState<Omit<Product, "id">>(emptyProduct(defaultSections[0].id));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -61,8 +74,9 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
     const resolvedSections = storedSections?.length ? storedSections : defaultSections;
     setSections(resolvedSections);
     setProducts(storedProducts?.length ? storedProducts : defaultProducts);
-    if (storedFinancials) setFinancials(storedFinancials);
+    setFinancials(storedFinancials ?? defaultFinancials);
     if (storedText) setText(storedText);
+    setCoverImage(loadCoverImage(type));
     setDraft(emptyProduct(resolvedSections[0]?.id ?? ""));
   }, [type]);
 
@@ -71,7 +85,14 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
     saveProducts(type, nextProducts);
     saveFinancialSettings(type, financials);
     saveTextSettings(type, text);
+    saveCoverImage(type, coverImage);
     setStatus("Settings saved.");
+  }
+
+  function updateCoverImage(value: CoverImageSettings | null) {
+    setCoverImage(value);
+    saveCoverImage(type, value);
+    setStatus(value ? "Cover image saved." : "Cover image removed.");
   }
 
   function addSection() {
@@ -105,6 +126,7 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
   function editProduct(product: Product) {
     setEditingId(product.id);
     setDraft({ ...product, customPrices: product.customPrices ? [...product.customPrices] : [{ value: 0, price: 0 }] });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function saveProduct() {
@@ -119,6 +141,7 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
     saveProducts(type, next);
     setEditingId(null);
     setDraft(emptyProduct(sections[0]?.id ?? ""));
+    setStatus("Product saved.");
   }
 
   function deleteProduct(id: string) {
@@ -138,28 +161,32 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
     setDraft({ ...draft, markupPercent: value, price });
   }
 
+  function updateTier(index: number, field: "value" | "price", value: number) {
+    const tiers = [...(draft.customPrices ?? [{ value: 0, price: 0 }])];
+    tiers[index] = { ...tiers[index], [field]: value };
+    setDraft({ ...draft, customPrices: tiers });
+  }
+
   return (
     <main className={`min-h-screen ${config.pageClassName} p-4`}>
-      <div className="mx-auto max-w-5xl space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-4xl">
+        <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div><p className="text-sm text-muted-foreground">{companySettings.name}</p><h1 className="text-3xl font-bold">{config.label} Admin</h1></div>
           <div className="flex gap-2"><Button asChild variant="outline"><Link href={`/unified/${type}`}>Open Quote Builder</Link></Button><Button asChild variant="outline"><Link href="/unified">Dashboard</Link></Button></div>
         </header>
 
-        <Card>
-          <CardHeader><CardTitle>Company Signature</CardTitle></CardHeader>
-          <CardContent className="grid gap-2 text-sm md:grid-cols-2">
+        <AdminDropdownCard title="Company Signature">
+          <div className="grid gap-2 text-sm md:grid-cols-2">
             <div><span className="font-medium">Name:</span> {companySettings.signatoryName}</div>
             <div><span className="font-medium">Role:</span> {companySettings.signatoryTitle}</div>
             <div><span className="font-medium">Company:</span> {companySettings.name}</div>
             <div><span className="font-medium">Phone:</span> {companySettings.phone}</div>
-            <p className="col-span-full text-muted-foreground">These are global company settings, so both Loft and Extension PDFs use the same signature details.</p>
-          </CardContent>
-        </Card>
+            <p className="col-span-full text-muted-foreground">Shared across Loft and Extension PDFs.</p>
+          </div>
+        </AdminDropdownCard>
 
-        <Card>
-          <CardHeader><CardTitle>Commission & VAT</CardTitle></CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-4">
+        <AdminDropdownCard title="Commission & VAT">
+          <div className="grid gap-4 md:grid-cols-4">
             {([
               ["VAT %", "vatRate"],
               ["Admin %", "commissionA"],
@@ -168,12 +195,11 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
             ] as const).map(([label, key]) => (
               <div className="space-y-2" key={key}><Label>{label}</Label><Input type="number" step="0.1" min="0" value={financials[key]} onChange={(event) => setFinancials({ ...financials, [key]: Number(event.target.value) || 0 })} /></div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </AdminDropdownCard>
 
-        <Card>
-          <CardHeader><CardTitle>Sections</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
+        <AdminDropdownCard title="Manage Sections">
+          <div className="space-y-3">
             <div className="flex gap-2"><Input placeholder="New section name" value={newSection} onChange={(event) => setNewSection(event.target.value)} /><Button onClick={addSection}><Plus className="mr-2 h-4 w-4" />Add</Button></div>
             {sections.map((section, index) => (
               <div key={section.id} className="flex items-center justify-between rounded-lg border bg-white/70 p-3">
@@ -181,12 +207,11 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
                 <div className="flex gap-1"><Button size="icon" variant="outline" onClick={() => moveSection(index, -1)} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button><Button size="icon" variant="outline" onClick={() => moveSection(index, 1)} disabled={index === sections.length - 1}><ArrowDown className="h-4 w-4" /></Button><Button size="icon" variant="outline" onClick={() => deleteSection(section.id)}><Trash2 className="h-4 w-4" /></Button></div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </AdminDropdownCard>
 
-        <Card>
-          <CardHeader><CardTitle>{editingId ? "Edit Product" : "Add Product"}</CardTitle></CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <AdminDropdownCard title={editingId ? "Edit Product" : "Add New Product"} forceOpen={Boolean(editingId)}>
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2"><Label>Name</Label><Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></div>
             <div className="space-y-2"><Label>Section</Label><Select value={draft.section} onValueChange={(value) => setDraft({ ...draft, section: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{sections.map((section) => <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></div>
@@ -196,31 +221,58 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
             <div className="space-y-2"><Label>Markup (%)</Label><Input type="number" min="0" step="0.01" value={draft.markupPercent} onChange={(event) => setMarkup(Number(event.target.value) || 0)} /></div>
             <div className="space-y-2"><Label>Price (£)</Label><Input type="number" min="0" step="0.01" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) || 0 })} /></div>
             <div className="flex items-center gap-2 pt-7"><Checkbox checked={Boolean(draft.isCustomPricing)} onCheckedChange={(checked) => setDraft({ ...draft, isCustomPricing: Boolean(checked) })} /><Label>Custom pricing</Label></div>
-            <div className="md:col-span-2 flex gap-2"><Button onClick={saveProduct}><Save className="mr-2 h-4 w-4" />{editingId ? "Update Product" : "Add Product"}</Button>{editingId && <Button variant="outline" onClick={() => { setEditingId(null); setDraft(emptyProduct(sections[0]?.id ?? "")); }}>Cancel</Button>}</div>
-          </CardContent>
-        </Card>
+            {draft.isCustomPricing && (
+              <div className="space-y-3 md:col-span-2">
+                <Label>Custom pricing tiers</Label>
+                {(draft.customPrices ?? []).map((tier, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_1fr_44px] gap-2">
+                    <Input type="number" step="0.01" min="0" value={tier.value} onChange={(event) => updateTier(index, "value", Number(event.target.value) || 0)} placeholder="Minimum value" />
+                    <Input type="number" step="0.01" min="0" value={tier.price} onChange={(event) => updateTier(index, "price", Number(event.target.value) || 0)} placeholder="Price" />
+                    <Button size="icon" variant="outline" onClick={() => setDraft({ ...draft, customPrices: (draft.customPrices ?? []).filter((_, tierIndex) => tierIndex !== index) })}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" onClick={() => setDraft({ ...draft, customPrices: [...(draft.customPrices ?? []), { value: 0, price: 0 }] })}><Plus className="mr-2 h-4 w-4" />Add Tier</Button>
+              </div>
+            )}
+            <div className="flex gap-2 md:col-span-2"><Button onClick={saveProduct}><Save className="mr-2 h-4 w-4" />{editingId ? "Update Product" : "Add Product"}</Button>{editingId && <Button variant="outline" onClick={() => { setEditingId(null); setDraft(emptyProduct(sections[0]?.id ?? "")); }}>Cancel</Button>}</div>
+          </div>
+        </AdminDropdownCard>
 
-        <Card>
-          <CardHeader><CardTitle>Products</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
+        <AdminDropdownCard title="Products">
+          <Accordion type="multiple" className="space-y-2">
             {sections.map((section) => {
               const sectionProducts = products.filter((product) => product.section === section.id);
               if (!sectionProducts.length) return null;
-              return <div key={section.id} className="space-y-2"><h2 className="font-semibold">{section.name}</h2>{sectionProducts.map((product) => <div key={product.id} className="flex items-start justify-between gap-3 rounded-lg border bg-white/70 p-3"><div><div className="font-medium">{product.name}</div><div className="text-sm text-muted-foreground">{product.description}</div><div className="text-sm">£{product.price.toFixed(2)}</div></div><div className="flex gap-1"><Button size="icon" variant="outline" onClick={() => editProduct(product)}><Edit className="h-4 w-4" /></Button><Button size="icon" variant="outline" onClick={() => deleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div>;
+              return (
+                <AccordionItem key={section.id} value={section.id} className="rounded-lg border px-4">
+                  <AccordionTrigger className="hover:no-underline">{section.name} <span className="ml-2 text-xs text-muted-foreground">({sectionProducts.length})</span></AccordionTrigger>
+                  <AccordionContent className="space-y-2">
+                    {sectionProducts.map((product) => (
+                      <div key={product.id} className="flex items-start justify-between gap-3 rounded-lg border bg-white/70 p-3">
+                        <div><div className="font-medium">{product.name}</div><div className="text-sm text-muted-foreground">{product.description}</div><div className="text-sm">£{product.price.toFixed(2)}</div></div>
+                        <div className="flex gap-1"><Button size="icon" variant="outline" onClick={() => editProduct(product)}><Edit className="h-4 w-4" /></Button><Button size="icon" variant="outline" onClick={() => deleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button></div>
+                      </div>
+                    ))}
+                  </AccordionContent>
+                </AccordionItem>
+              );
             })}
-          </CardContent>
-        </Card>
+          </Accordion>
+        </AdminDropdownCard>
 
-        <Card>
-          <CardHeader><CardTitle>PDF Text Sections</CardTitle></CardHeader>
-          <CardContent className="space-y-5">
+        <AdminDropdownCard title="Bespoke PDF Cover Image">
+          <CoverImageManager value={coverImage} onChange={updateCoverImage} />
+        </AdminDropdownCard>
+
+        <AdminDropdownCard title="PDF Text Sections">
+          <div className="space-y-5">
             <div className="space-y-2"><Label>Brief</Label><Textarea className="min-h-36" value={text.briefText} onChange={(event) => setText({ ...text, briefText: event.target.value })} /></div>
             <div className="space-y-2"><Label>Establishing End Cost</Label><Textarea className="min-h-52" value={text.pricingText} onChange={(event) => setText({ ...text, pricingText: event.target.value })} /></div>
             <div className="space-y-2"><Label>Terms & Conditions</Label><Textarea className="min-h-72" value={text.termsAndConditions} onChange={(event) => setText({ ...text, termsAndConditions: event.target.value })} /></div>
-          </CardContent>
-        </Card>
+          </div>
+        </AdminDropdownCard>
 
-        <div className="sticky bottom-4 rounded-xl border bg-white/95 p-3 shadow-lg backdrop-blur flex items-center justify-between gap-3"><span className="text-sm">{status}</span><Button onClick={() => persistAll()}><Save className="mr-2 h-4 w-4" />Save All Settings</Button></div>
+        <div className="sticky bottom-4 flex items-center justify-between gap-3 rounded-xl border bg-white/95 p-3 shadow-lg backdrop-blur"><span className="text-sm">{status}</span><Button onClick={() => persistAll()}><Save className="mr-2 h-4 w-4" />Save All Settings</Button></div>
       </div>
     </main>
   );
