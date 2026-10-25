@@ -122,6 +122,12 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
     setFormData({ name: "", address: "", items: [] });
   }
 
+  function useQuoteAsTemplate(quote: SavedQuote) {
+    setActiveQuote(null);
+    setFormData(structuredClone(quote.formData));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function openSaveDialog() {
     if (!formData.name.trim()) {
       alert("Please enter customer name");
@@ -225,6 +231,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
             <h1 className="text-3xl font-bold text-primary">{config.label} Quote Generator</h1>
             {activeQuote && !identityChanged && <p className="mt-1 text-sm text-muted-foreground">Editing from {activeQuote.title}; saving creates Rev {nextRevision}.</p>}
             {activeQuote && identityChanged && <p className="mt-1 text-sm font-medium text-amber-700">Client/property changed from {activeQuote.title}; saving will create a new quote at Rev 1.</p>}
+            {!activeQuote && formData.items.length > 0 && <p className="mt-1 text-sm text-muted-foreground">Template/new quote mode; the first save will be Rev 1.</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={newQuote}>New Quote</Button>
@@ -263,6 +270,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
           onToDateChange={setToDate}
           onSortChange={setSort}
           onLoadQuote={loadQuote}
+          onUseAsTemplate={useQuoteAsTemplate}
           onMoveQuoteToFolder={moveQuoteToFolder}
           onDeleteQuote={deleteQuote}
           onCustomerPdf={customerPdf}
