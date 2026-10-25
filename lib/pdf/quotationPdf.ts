@@ -128,7 +128,7 @@ export function generateQuotationPdf({ formData, products, sections, financials,
   doc.setFontSize(10);
   y = writeWrappedText(doc, text.pricingText, 20, y, 170, { lineHeight: 4.5, paragraphGap: 3.5 });
 
-  const signature = signatureSettings ?? {
+  const signature: SignatureSettings = signatureSettings ?? {
     signatoryName: companySettings.signatoryName,
     signatoryTitle: companySettings.signatoryTitle,
     companyName: companySettings.name,
