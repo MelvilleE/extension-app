@@ -26,6 +26,7 @@ import {
   loadProducts,
   loadQuotes,
   loadSections,
+  loadSignatureSettings,
   loadTextSettings,
   saveFolders,
   saveQuotes,
@@ -40,9 +41,19 @@ import type {
   QuotationFormData,
   SavedQuote,
   Section,
+  SignatureSettings,
 } from "@/types/quotation";
 
 const defaultFinancials: FinancialSettings = { vatRate: 20, commissionA: 0.5, commissionB: 1, commissionC: 2.5 };
+const defaultSignature: SignatureSettings = {
+  signatoryName: companySettings.signatoryName,
+  signatoryTitle: companySettings.signatoryTitle,
+  companyName: companySettings.name,
+  phone: companySettings.phone,
+  email: "",
+  imageWidth: 75,
+  imageHeight: 30,
+};
 const emptyForm = (): QuotationFormData => ({ name: "", address: "", items: [], images: [] });
 
 async function assetToDataUrl(path: string) {
@@ -72,6 +83,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
   const [formData, setFormData] = useState<QuotationFormData>(emptyForm());
   const [financials, setFinancials] = useState<FinancialSettings>(defaultFinancials);
   const [text, setText] = useState<QuoteTextSettings>({ briefText: config.defaultBrief, pricingText: config.defaultPricingText, termsAndConditions: "" });
+  const [signatureSettings, setSignatureSettings] = useState<SignatureSettings>(defaultSignature);
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -93,6 +105,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
     setQuotes(loadQuotes(type));
     setFolders(loadFolders());
     setLogos(loadLogos(type));
+    setSignatureSettings(loadSignatureSettings() ?? defaultSignature);
     setFinancials(loadFinancialSettings(type) ?? defaultFinancials);
     if (storedText) {
       setText(storedText);
@@ -213,6 +226,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
       logoDataUrl: logo,
       logos,
       signatureDataUrl: signature,
+      signatureSettings,
       fileName: !identityChanged && activeQuote ? `${activeQuote.title} - ${config.label} Quotation` : undefined,
     });
   }
@@ -273,8 +287,8 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
           onMoveQuoteToFolder={moveQuoteToFolder}
           onDeleteQuote={deleteQuote}
           onCustomerPdf={customerPdf}
-          onInternalWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: workingLogo, includeCosts: true, fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Internal Workings` : undefined })}
-          onClientWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: workingLogo, includeCosts: false, fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Client Workings` : undefined })}
+          onInternalWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: workingLogo, signatureSettings, signatureDataUrl: signature, includeCosts: true, fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Internal Workings` : undefined })}
+          onClientWorkings={() => generateWorkingDetailsPdf({ formData, products, financials, logoDataUrl: workingLogo, signatureSettings, signatureDataUrl: signature, includeCosts: false, fileName: !identityChanged && activeQuote ? `${activeQuote.title} - Client Workings` : undefined })}
           onSaveQuote={openSaveDialog}
         />
 
