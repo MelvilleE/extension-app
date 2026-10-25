@@ -19,6 +19,7 @@ import { calculateItemTotal, calculateQuoteTotals } from "@/lib/quotation/calcul
 import { buildSavedQuoteTitle, getNextRevision, hasQuoteIdentityChanged } from "@/lib/quotation/revisions";
 import { filterAndSortQuotes, type QuoteSort } from "@/lib/quotation/search";
 import {
+  loadCoverImage,
   loadFinancialSettings,
   loadFolders,
   loadProducts,
@@ -29,6 +30,7 @@ import {
   saveQuotes,
 } from "@/lib/quotation/storage";
 import type {
+  CoverImageSettings,
   FinancialSettings,
   Product,
   QuoteFolder,
@@ -67,6 +69,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
   const [formData, setFormData] = useState<QuotationFormData>({ name: "", address: "", items: [] });
   const [financials, setFinancials] = useState<FinancialSettings>(defaultFinancials);
   const [text, setText] = useState<QuoteTextSettings>({ briefText: config.defaultBrief, pricingText: config.defaultPricingText, termsAndConditions: "" });
+  const [coverImage, setCoverImage] = useState<CoverImageSettings | null>(null);
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -87,6 +90,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
     setCatalogueMigrated(Boolean(storedSections?.length || storedProducts?.length));
     setQuotes(loadQuotes(type));
     setFolders(loadFolders());
+    setCoverImage(loadCoverImage(type));
     setFinancials(loadFinancialSettings(type) ?? defaultFinancials);
     if (storedText) {
       setText(storedText);
@@ -216,6 +220,7 @@ export default function UnifiedQuotationAppClassic({ type }: { type: QuoteType }
       config,
       logoDataUrl: logo,
       signatureDataUrl: signature,
+      coverImage,
       fileName: !identityChanged && activeQuote ? `${activeQuote.title} - ${config.label} Quotation` : undefined,
     });
   }
