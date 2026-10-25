@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import LogoManagement from "@/components/quotation/LogoManagement";
+import SignatureManagement from "@/components/quotation/SignatureManagement";
 import { companySettings } from "@/config/company";
 import { defaultProducts, defaultSections } from "@/config/default-catalog";
 import { getQuoteTypeConfig } from "@/config/quote-types";
@@ -22,16 +23,27 @@ import {
   loadLogos,
   loadProducts,
   loadSections,
+  loadSignatureSettings,
   loadTextSettings,
   saveFinancialSettings,
   saveLogos,
   saveProducts,
   saveSections,
+  saveSignatureSettings,
   saveTextSettings,
 } from "@/lib/quotation/storage";
-import type { CoverImageSettings, FinancialSettings, Product, QuoteTextSettings, QuoteType, Section, ValueType } from "@/types/quotation";
+import type { CoverImageSettings, FinancialSettings, Product, QuoteTextSettings, QuoteType, Section, SignatureSettings, ValueType } from "@/types/quotation";
 
 const defaultFinancials: FinancialSettings = { vatRate: 20, commissionA: 0.5, commissionB: 1, commissionC: 2.5 };
+const defaultSignature: SignatureSettings = {
+  signatoryName: companySettings.signatoryName,
+  signatoryTitle: companySettings.signatoryTitle,
+  companyName: companySettings.name,
+  phone: companySettings.phone,
+  email: "",
+  imageWidth: 75,
+  imageHeight: 30,
+};
 
 function emptyProduct(section: string): Omit<Product, "id"> {
   return {
@@ -60,21 +72,30 @@ function SortableSection({ section, children }: { section: Section; children: Re
   );
 }
 
-async function defaultLogo(): Promise<CoverImageSettings | null> {
+async function dataUrlFromAsset(path: string) {
   try {
-    const response = await fetch("/nllr_logo.png");
+    const response = await fetch(path);
     if (!response.ok) return null;
     const blob = await response.blob();
-    const src = await new Promise<string>((resolve, reject) => {
+    return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Invalid logo"));
+      reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Invalid image"));
       reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(blob);
     });
-    return { id: "default-nllr-logo", name: "nllr_logo.png", src, x: 15, y: 15, width: 60, height: 30 };
   } catch {
     return null;
   }
+}
+
+async function defaultLogo(): Promise<CoverImageSettings | null> {
+  const src = await dataUrlFromAsset("/nllr_logo.png");
+  return src ? { id: "default-nllr-logo", name: "nllr_logo.png", src, x: 15, y: 15, width: 60, height: 30 } : null;
+}
+
+async function defaultSignatureWithImage(): Promise<SignatureSettings> {
+  const src = await dataUrlFromAsset(companySettings.signaturePath);
+  return src ? { ...defaultSignature, imageName: "signature.png", imageSrc: src } : defaultSignature;
 }
 
 export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
@@ -84,6 +105,7 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
   const [financials, setFinancials] = useState<FinancialSettings>(defaultFinancials);
   const [text, setText] = useState<QuoteTextSettings>({ briefText: config.defaultBrief, pricingText: config.defaultPricingText, termsAndConditions: "" });
   const [logos, setLogos] = useState<CoverImageSettings[]>([]);
+  const [signatureSettings, setSignatureSettings] = useState<SignatureSettings>(defaultSignature);
   const [newSectionName, setNewSectionName] = useState("");
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [sectionToEditName, setSectionToEditName] = useState("");
@@ -91,6 +113,7 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [openSections, setOpenSections] = useState<string[]>([]);
   const [logosExpanded, setLogosExpanded] = useState(false);
+  const [signatureExpanded, setSignatureExpanded] = useState(false);
   const [commissionExpanded, setCommissionExpanded] = useState(false);
   const [manageSectionsExpanded, setManageSectionsExpanded] = useState(false);
   const [productFormExpanded, setProductFormExpanded] = useState(false);
@@ -107,6 +130,7 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
     const storedFinancials = loadFinancialSettings(type);
     const storedText = loadTextSettings(type);
     const storedLogos = loadLogos(type);
+    const storedSignature = loadSignatureSettings();
     const resolvedSections = storedSections?.length ? storedSections : defaultSections;
     setSections(resolvedSections);
     setProducts(storedProducts?.length ? storedProducts : defaultProducts);
@@ -122,6 +146,14 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
         saveLogos(type, [logo]);
       });
     }
+    if (storedSignature) {
+      setSignatureSettings(storedSignature);
+    } else {
+      defaultSignatureWithImage().then((signature) => {
+        setSignatureSettings(signature);
+        saveSignatureSettings(signature);
+      });
+    }
   }, [type]);
 
   function persistAll() {
@@ -130,12 +162,19 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
     saveFinancialSettings(type, financials);
     saveTextSettings(type, text);
     saveLogos(type, logos);
+    saveSignatureSettings(signatureSettings);
     setStatus("Settings saved.");
   }
 
   function changeLogos(next: CoverImageSettings[]) {
     setLogos(next);
     saveLogos(type, next);
+  }
+
+  function changeSignature(next: SignatureSettings) {
+    setSignatureSettings(next);
+    saveSignatureSettings(next);
+    setStatus("Signature saved.");
   }
 
   function handleAddSection() {
@@ -261,6 +300,13 @@ export default function UnifiedAdminApp({ type }: { type: QuoteType }) {
             <CardTitle>Logo Management</CardTitle><span className="text-sm text-gray-500">{logosExpanded ? "▲" : "▼"}</span>
           </CardHeader>
           {logosExpanded && <CardContent className="space-y-4"><LogoManagement logos={logos} onChange={changeLogos} /></CardContent>}
+        </Card>
+
+        <Card className="mb-8">
+          <CardHeader className="flex cursor-pointer flex-row items-center justify-between" onClick={() => setSignatureExpanded((previous) => !previous)}>
+            <CardTitle>Email / PDF Signature</CardTitle><span className="text-sm text-gray-500">{signatureExpanded ? "▲" : "▼"}</span>
+          </CardHeader>
+          {signatureExpanded && <CardContent className="space-y-4"><SignatureManagement value={signatureSettings} onChange={changeSignature} /></CardContent>}
         </Card>
 
         <Card className="mb-8">
